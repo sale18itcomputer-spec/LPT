@@ -5,15 +5,13 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { DataProvider } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './src/auth/Login';
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
 import { motion, AnimatePresence } from 'framer-motion';
 import OfflineScreen from './src/ui/OfflineScreen';
 import { TasksProvider } from './contexts/TasksContext';
 import { ToastProvider } from './contexts/ToastContext';
 import Toast from './src/ui/Toast';
 
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
-const MotionDiv = motion.div as any;
+const MotionDiv = motion.div;
 
 
 const AppContent: React.FC = () => {

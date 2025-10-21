@@ -1,6 +1,5 @@
 
 import React from 'react';
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
 import { motion, type HTMLMotionProps } from 'framer-motion';
 import { ArrowsPointingOutIcon } from './Icons';
 
@@ -15,8 +14,7 @@ interface CustomCardProps {
 // Omit 'title' from HTMLMotionProps to avoid conflict with our custom title prop
 type CardProps = Omit<HTMLMotionProps<'div'>, 'children' | 'title'> & CustomCardProps;
 
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
-const MotionDiv = motion.div as any;
+const MotionDiv = motion.div;
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, children, title, description, controls, onExpand, ...props }, ref) => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import Card from './ui/Card';
 import { Spinner } from './ui/Spinner';
 import { ArrowRightOnRectangleIcon, EnvelopeIcon, UserIcon, ShieldCheckIcon, LockClosedIcon, BellIcon } from './ui/Icons';

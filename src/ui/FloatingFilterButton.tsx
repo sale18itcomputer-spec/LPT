@@ -1,5 +1,5 @@
+
 import React from 'react';
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
 import { motion } from 'framer-motion';
 import { FilterIcon } from './Icons';
 
@@ -8,8 +8,7 @@ interface FloatingFilterButtonProps {
     hasActiveFilters: boolean;
 }
 
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
-const MotionButton = motion.button as any;
+const MotionButton = motion.button;
 
 const FloatingFilterButton: React.FC<FloatingFilterButtonProps> = ({ onClick, hasActiveFilters }) => {
     return (

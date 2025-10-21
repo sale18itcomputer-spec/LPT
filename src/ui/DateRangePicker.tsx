@@ -1,5 +1,5 @@
+
 import React, { useState, useRef, useEffect, useId } from 'react';
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarDaysIcon, ChevronDownIcon } from './Icons';
 
@@ -78,8 +78,7 @@ const calculateDatesForPreset = (preset: DateRangePreset): { startDate: string |
     };
 };
 
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
-const MotionDiv = motion.div as any;
+const MotionDiv = motion.div;
 
 
 export const DateRangePicker: React.FC<DateRangePickerProps> = ({ presets, currentPreset, startDate, endDate, onRangeChange, label }) => {

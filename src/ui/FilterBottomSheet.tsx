@@ -1,5 +1,5 @@
+
 import React from 'react';
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
 import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon } from './Icons';
 
@@ -21,8 +21,7 @@ const sheetVariants = {
     hidden: { y: '100%' },
 };
 
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
-const MotionDiv = motion.div as any;
+const MotionDiv = motion.div;
 
 const FilterBottomSheet: React.FC<FilterBottomSheetProps> = ({ isOpen, onClose, onClear, title, children }) => {
     return (

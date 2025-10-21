@@ -1,5 +1,5 @@
+
 import React, { useState, useMemo, Fragment, useEffect, useCallback } from 'react';
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../contexts/DataContext';
 import Card from '../ui/Card';
@@ -24,8 +24,7 @@ interface SortConfig {
   direction: SortOrder;
 }
 
-// FIX: Framer motion props were not being recognized. Casting motion components to `any` to bypass type issue.
-const MotionDiv = motion.div as any;
+const MotionDiv = motion.div;
 
 // --- Sub-components ---
 const ProfitKpiCard: React.FC<{ label: string; value: number; icon: React.FC<any>; formatter?: (val: number) => string; isPrimary?: boolean }> = ({ label, value, icon: Icon, formatter, isPrimary = false }) => (
