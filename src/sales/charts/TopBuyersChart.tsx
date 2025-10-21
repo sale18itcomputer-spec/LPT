@@ -28,7 +28,8 @@ const TopBuyersChart: React.FC<TopBuyersChartProps> = ({ data, onBuyerSelect, se
 
         return Object.entries(aggregated)
             .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value)
+            // FIX: Explicitly type sort parameters `a` and `b` to fix type inference.
+            .sort((a: { value: number }, b: { value: number }) => b.value - a.value)
             .slice(0, itemCount);
     }, [data, itemCount]);
 

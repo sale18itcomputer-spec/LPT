@@ -35,7 +35,8 @@ const TopSellingModelsChart: React.FC<TopSellingModelsChartProps> = ({ data, sor
         }, {} as Record<string, { revenue: number; units: number; modelName: string; }>);
 
         return Object.entries(aggregated)
-            .map(([name, { revenue, units, modelName }]) => ({ name, revenue, units, modelName }))
+            // FIX: Explicitly type the map parameter to ensure correct destructuring.
+            .map(([name, { revenue, units, modelName }]: [string, { revenue: number; units: number; modelName: string; }]) => ({ name, revenue, units, modelName }))
             .sort((a, b) => b[sortBy] - a[sortBy])
             .slice(0, itemCount);
     }, [data, sortBy, itemCount]);

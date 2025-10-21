@@ -185,7 +185,8 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, userRole })
     }, [allSales]);
 
     const aggregatedData: AugmentedMtmGroup[] = useMemo(() => {
-        const inventoryMap = new Map(inventoryData.map(item => [item.mtm, item]));
+        // FIX: Explicitly type the Map to ensure correct type inference.
+        const inventoryMap = new Map<string, InventoryItem>(inventoryData.map(item => [item.mtm, item]));
 
         const onHandQtyMap = new Map<string, number>();
         const soldSerialsSet = new Set(allSales.map(s => s.serialNumber));
@@ -387,7 +388,8 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, userRole })
 
 
     const profitabilityChartData = useMemo(() => {
-        const dataByProductLine = sortedAndFilteredData.reduce((acc, item) => {
+        // FIX: Explicitly type accumulator to fix type inference issue.
+        const dataByProductLine = sortedAndFilteredData.reduce<Record<string, { totalSdpProfitValue: number; totalSdpRevenuePotential: number; count: number }>>((acc, item) => {
             const pl = item.productLine || 'N/A';
             if (!acc[pl]) {
                 acc[pl] = { totalSdpProfitValue: 0, totalSdpRevenuePotential: 0, count: 0 };
@@ -398,10 +400,11 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, userRole })
             }
             acc[pl].count++;
             return acc;
-        }, {} as Record<string, { totalSdpProfitValue: number, totalSdpRevenuePotential: number, count: number }>);
+        }, {});
         
+        // FIX: Explicitly type the map parameter to fix destructuring issue.
         return Object.entries(dataByProductLine)
-            .map(([name, { totalSdpProfitValue, totalSdpRevenuePotential, count }]) => ({
+            .map(([name, { totalSdpProfitValue, totalSdpRevenuePotential, count }]: [string, { totalSdpProfitValue: number; totalSdpRevenuePotential: number; count: number }]) => ({
                 name,
                 margin: totalSdpRevenuePotential > 0 ? (totalSdpProfitValue / totalSdpRevenuePotential) * 100 : 0,
                 count

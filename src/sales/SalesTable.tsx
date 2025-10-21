@@ -87,7 +87,8 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales }) => {
         acc[sale.invoiceNumber].totalRevenue += sale.totalRevenue;
         return acc;
     }, {} as Record<string, AugmentedInvoice>);
-    Object.values(invoices).forEach(inv => inv.itemCount = inv.items.length);
+    // FIX: Explicitly type `inv` to avoid it being inferred as `unknown`.
+    Object.values(invoices).forEach((inv: AugmentedInvoice) => (inv.itemCount = inv.items.length));
     return Object.values(invoices);
   }, [sales]);
 

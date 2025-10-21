@@ -40,7 +40,8 @@ const ProductHierarchyChart: React.FC<ProductHierarchyChartProps> = ({ orders, s
         }, {} as Record<string, { revenue: number, units: number }>);
 
         seriesData = Object.entries(revenueByPL)
-            .map(([name, data]) => ({ x: name, y: Math.round(data.revenue), units: data.units }))
+            // FIX: Explicitly type `data` to resolve properties `revenue` and `units`.
+            .map(([name, data]: [string, { revenue: number; units: number }]) => ({ x: name, y: Math.round(data.revenue), units: data.units }))
             .sort((a, b) => b.y - a.y);
         
         const palette = HIERARCHY_PALETTES[0];

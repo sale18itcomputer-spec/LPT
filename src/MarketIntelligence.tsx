@@ -139,6 +139,7 @@ const MarketIntelligence: React.FC = () => {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const prompt = getPrompt(activeTab, query);
             
+            // @google/genai-sdk fix: Use new ai.models.generateContentStream API and specify Google Search tool
             const streamResult = await ai.models.generateContentStream({
                 model: 'gemini-2.5-flash',
                 contents: prompt,

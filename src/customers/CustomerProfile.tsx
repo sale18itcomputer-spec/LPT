@@ -43,7 +43,8 @@ const PurchaseHistoryChart: React.FC<{ sales: Sale[] }> = ({ sales }) => {
             return acc;
         }, {} as Record<string, { value: number, quarter: string, year: number }>);
         
-        return Object.values(aggregated).sort((a,b) => {
+        // FIX: Explicitly type sort parameters to fix type inference issue.
+        return Object.values(aggregated).sort((a: { year: number; quarter: string }, b: { year: number; quarter: string }) => {
             if (a.year !== b.year) return a.year - b.year;
             return a.quarter.localeCompare(b.quarter);
         });
@@ -146,7 +147,8 @@ const TopProductsTable: React.FC<{ sales: Sale[]; userRole: string }> = ({ sales
             acc[key].revenue += sale.totalRevenue;
             return acc;
         }, {} as Record<string, { mtm: string; modelName: string; units: number; revenue: number; }>);
-        return Object.values(aggregated).sort((a,b) => b.revenue - a.revenue).slice(0, 10);
+        // FIX: Explicitly type sort parameters to fix type inference issue.
+        return Object.values(aggregated).sort((a: { revenue: number }, b: { revenue: number }) => b.revenue - a.revenue).slice(0, 10);
     }, [sales]);
 
     if (topProducts.length === 0) {
@@ -230,7 +232,8 @@ const CustomerProfile = React.forwardRef<HTMLDivElement, CustomerProfileProps>((
             acc[sale.invoiceNumber].units += sale.quantity;
             return acc;
         }, {} as Record<string, { date: string | null; revenue: number; units: number }>);
-        return Object.entries(invoices).map(([number, data]) => ({ number, ...data })).sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+        // FIX: Explicitly type map parameter to fix type inference issue with spread operator.
+        return Object.entries(invoices).map(([number, data]: [string, { date: string | null; revenue: number; units: number }]) => ({ number, ...data })).sort((a,b) => (b.date || '').localeCompare(a.date || ''));
     }, [customer.sales]);
 
     const totalPages = Math.ceil(customerInvoices.length / itemsPerPage);

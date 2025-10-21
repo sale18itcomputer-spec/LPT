@@ -236,7 +236,8 @@ const DataTransformer: React.FC = () => {
 
     const handleGeneratePivot = useCallback(() => {
         if (transformedData.length === 0) return;
-        const grouped = transformedData.reduce((acc: Record<string, TransformedData[]>, row) => {
+        // FIX: Explicitly type `grouped` to fix type inference issue.
+        const grouped: Record<string, TransformedData[]> = transformedData.reduce((acc: Record<string, TransformedData[]>, row) => {
             const key = String(row[pivotConfig.groupBy as keyof TransformedData]);
             if (!acc[key]) acc[key] = [];
             acc[key].push(row);

@@ -26,9 +26,11 @@ const AIProfileAnalysis: React.FC<{ customer: Customer }> = ({ customer }) => {
                 return acc;
             }, {} as Record<string, number>)
         )
-        .sort((a,b) => b[1] - a[1])
+        // FIX: Explicitly type sort parameters `a` and `b` to fix type inference.
+        .sort((a: [string, number], b: [string, number]) => b[1] - a[1])
         .slice(0, 5)
-        .map(([name, revenue]) => `- ${name} ($${revenue.toFixed(0)})`)
+        // FIX: Explicitly type map parameters `name` and `revenue` to fix type inference.
+        .map(([name, revenue]: [string, number]) => `- ${name} ($${revenue.toFixed(0)})`)
         .join('\n');
 
         return `

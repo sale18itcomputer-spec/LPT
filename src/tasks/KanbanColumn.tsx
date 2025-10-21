@@ -46,7 +46,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ status, tasks, draggedTask,
                     </button>
                 </div>
             </div>
-            <div className="flex-grow min-h-0 overflow-y-auto p-2 kanban-column-content space-y-2">
+            <div className="flex-grow min-h-0 overflow-y-auto p-2 kanban-column-content flex flex-col gap-3">
                 <AnimatePresence>
                     {tasks.map((task, index) => (
                        <React.Fragment key={task.id}>

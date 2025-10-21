@@ -45,7 +45,8 @@ const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({ data: salesData, 
             return acc;
         }, {} as Record<string, { sortKey: string, label: string, value: number }>);
         
-        return Object.values(aggregated).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+        // FIX: Explicitly type sort parameters `a` and `b` to fix type inference.
+        return Object.values(aggregated).sort((a: { sortKey: string }, b: { sortKey: string }) => a.sortKey.localeCompare(b.sortKey));
     }, [salesData, granularity]);
     
     const isDense = trendData.length > (granularity === 'monthly' ? 10 : 6);
