@@ -1,9 +1,7 @@
-
-
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../contexts/AuthContext';
-import type { ViewType } from '../../types';
+import { useAuth } from '../contexts/AuthContext';
+import type { ViewType } from '../types';
 import { 
     XMarkIcon, UserCircleIcon, ArrowRightOnRectangleIcon, SparklesIcon, BuildingStorefrontIcon, 
     BullseyeIcon, TruckIcon, BanknotesIcon, ClockIcon, CpuChipIcon, PlusCircleIcon, 
