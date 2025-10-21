@@ -704,16 +704,16 @@ const fetchAndProcessData = async <T>(url: string, type: 'orders' | 'sales' | 'a
  * Retrieves order data from the public Google Sheet.
  */
 export const getOrderData = (): Promise<OrderDataResponse> => {
-  return fetchAndProcessData<OrderDataResponse>(ORDER_SHEET_URL, 'orders');
-};
-
-/**
- * Forces a refresh of the order data by fetching it again with a cache-busting parameter.
- */
-export const forceRefreshOrders = (): Promise<OrderDataResponse> => {
   const url = new URL(ORDER_SHEET_URL);
   url.searchParams.set('_cacheBust', Date.now().toString());
   return fetchAndProcessData<OrderDataResponse>(url.toString(), 'orders');
+};
+
+/**
+ * Forces a refresh of the order data.
+ */
+export const forceRefreshOrders = (): Promise<OrderDataResponse> => {
+  return getOrderData();
 };
 
 
@@ -723,26 +723,27 @@ export const forceRefreshOrders = (): Promise<OrderDataResponse> => {
  * Retrieves sales data from the public Google Sheet.
  */
 export const getSaleData = (): Promise<SaleDataResponse> => {
-  return fetchAndProcessData<SaleDataResponse>(SALE_SHEET_URL, 'sales');
-};
-
-/**
- * Forces a refresh of the sales data by fetching it again with a cache-busting parameter.
- */
-export const forceRefreshSales = (): Promise<SaleDataResponse> => {
   const url = new URL(SALE_SHEET_URL);
   url.searchParams.set('_cacheBust', Date.now().toString());
   return fetchAndProcessData<SaleDataResponse>(url.toString(), 'sales');
+};
+
+/**
+ * Forces a refresh of the sales data.
+ */
+export const forceRefreshSales = (): Promise<SaleDataResponse> => {
+  return getSaleData();
 };
 
 
 // --- Auth Data Functions ---
 /**
  * Retrieves user authentication data from the public Google Sheet.
- * This should only be called once.
  */
 export const getAuthData = (): Promise<(AuthUser & { password: string })[]> => {
-  return fetchAndProcessData<(AuthUser & { password: string })[]>(AUTH_SHEET_URL, 'auth');
+  const url = new URL(AUTH_SHEET_URL);
+  url.searchParams.set('_cacheBust', Date.now().toString());
+  return fetchAndProcessData<(AuthUser & { password: string })[]>(url.toString(), 'auth');
 };
 
 // --- Price List Data Functions ---
@@ -750,7 +751,9 @@ export const getAuthData = (): Promise<(AuthUser & { password: string })[]> => {
  * Retrieves price list data from the public Google Sheet.
  */
 export const getPriceListData = (): Promise<PriceListItem[]> => {
-  return fetchAndProcessData<PriceListItem[]>(PRICE_LIST_SHEET_URL, 'price-list');
+  const url = new URL(PRICE_LIST_SHEET_URL);
+  url.searchParams.set('_cacheBust', Date.now().toString());
+  return fetchAndProcessData<PriceListItem[]>(url.toString(), 'price-list');
 };
 
 // --- Serialization Data Functions ---
@@ -758,16 +761,16 @@ export const getPriceListData = (): Promise<PriceListItem[]> => {
  * Retrieves serialization data from the public Google Sheet.
  */
 export const getSerializationData = (): Promise<SerializedItem[]> => {
-  return fetchAndProcessData<SerializedItem[]>(SERIALIZATION_SHEET_URL, 'serialization');
+  const url = new URL(SERIALIZATION_SHEET_URL);
+  url.searchParams.set('_cacheBust', Date.now().toString());
+  return fetchAndProcessData<SerializedItem[]>(url.toString(), 'serialization');
 };
 
 /**
  * Forces a refresh of the serialization data.
  */
 export const forceRefreshSerialization = (): Promise<SerializedItem[]> => {
-  const url = new URL(SERIALIZATION_SHEET_URL);
-  url.searchParams.set('_cacheBust', Date.now().toString());
-  return fetchAndProcessData<SerializedItem[]>(url.toString(), 'serialization');
+  return getSerializationData();
 };
 
 // --- Rebate Data Functions ---
@@ -775,16 +778,16 @@ export const forceRefreshSerialization = (): Promise<SerializedItem[]> => {
  * Retrieves rebate programs data from the public Google Sheet.
  */
 export const getRebateData = (): Promise<RebateProgram[]> => {
-  return fetchAndProcessData<RebateProgram[]>(REBATE_SHEET_URL, 'rebates');
+  const url = new URL(REBATE_SHEET_URL);
+  url.searchParams.set('_cacheBust', Date.now().toString());
+  return fetchAndProcessData<RebateProgram[]>(url.toString(), 'rebates');
 };
 
 /**
  * Forces a refresh of the rebate programs data.
  */
 export const forceRefreshRebates = (): Promise<RebateProgram[]> => {
-  const url = new URL(REBATE_SHEET_URL);
-  url.searchParams.set('_cacheBust', Date.now().toString());
-  return fetchAndProcessData<RebateProgram[]>(url.toString(), 'rebates');
+  return getRebateData();
 };
 
 // --- Rebate Detail Data Functions ---
@@ -792,16 +795,16 @@ export const forceRefreshRebates = (): Promise<RebateProgram[]> => {
  * Retrieves rebate detail data from the public Google Sheet.
  */
 export const getRebateDetailData = (): Promise<RebateDetail[]> => {
-  return fetchAndProcessData<RebateDetail[]>(REBATE_DETAIL_SHEET_URL, 'rebate-details');
+  const url = new URL(REBATE_DETAIL_SHEET_URL);
+  url.searchParams.set('_cacheBust', Date.now().toString());
+  return fetchAndProcessData<RebateDetail[]>(url.toString(), 'rebate-details');
 };
 
 /**
  * Forces a refresh of the rebate detail data.
  */
 export const forceRefreshRebateDetails = (): Promise<RebateDetail[]> => {
-  const url = new URL(REBATE_DETAIL_SHEET_URL);
-  url.searchParams.set('_cacheBust', Date.now().toString());
-  return fetchAndProcessData<RebateDetail[]>(url.toString(), 'rebate-details');
+  return getRebateDetailData();
 };
 
 // --- Rebate Sales Data Functions ---
@@ -809,16 +812,16 @@ export const forceRefreshRebateDetails = (): Promise<RebateDetail[]> => {
  * Retrieves rebate sales data from the public Google Sheet.
  */
 export const getRebateSaleData = (): Promise<RebateSale[]> => {
-  return fetchAndProcessData<RebateSale[]>(REBATE_SALES_SHEET_URL, 'rebate-sales');
+  const url = new URL(REBATE_SALES_SHEET_URL);
+  url.searchParams.set('_cacheBust', Date.now().toString());
+  return fetchAndProcessData<RebateSale[]>(url.toString(), 'rebate-sales');
 };
 
 /**
  * Forces a refresh of the rebate sales data.
  */
 export const forceRefreshRebateSales = (): Promise<RebateSale[]> => {
-  const url = new URL(REBATE_SALES_SHEET_URL);
-  url.searchParams.set('_cacheBust', Date.now().toString());
-  return fetchAndProcessData<RebateSale[]>(url.toString(), 'rebate-sales');
+  return getRebateSaleData();
 };
 
 // --- Shipment Data Functions ---
@@ -826,16 +829,16 @@ export const forceRefreshRebateSales = (): Promise<RebateSale[]> => {
  * Retrieves shipment data from the public Google Sheet.
  */
 export const getShipmentData = (): Promise<Shipment[]> => {
-  return fetchAndProcessData<Shipment[]>(SHIPMENT_SHEET_URL, 'shipments');
+  const url = new URL(SHIPMENT_SHEET_URL);
+  url.searchParams.set('_cacheBust', Date.now().toString());
+  return fetchAndProcessData<Shipment[]>(url.toString(), 'shipments');
 };
 
 /**
  * Forces a refresh of the shipment data.
  */
 export const forceRefreshShipments = (): Promise<Shipment[]> => {
-  const url = new URL(SHIPMENT_SHEET_URL);
-  url.searchParams.set('_cacheBust', Date.now().toString());
-  return fetchAndProcessData<Shipment[]>(url.toString(), 'shipments');
+  return getShipmentData();
 };
 
 // --- Backpack Cost Data Functions ---
@@ -843,16 +846,16 @@ export const forceRefreshShipments = (): Promise<Shipment[]> => {
  * Retrieves backpack cost data from the public Google Sheet.
  */
 export const getBackpackCostData = (): Promise<AccessoryCost[]> => {
-  return fetchAndProcessData<AccessoryCost[]>(BACKPACK_COST_SHEET_URL, 'backpack-costs');
+  const url = new URL(BACKPACK_COST_SHEET_URL);
+  url.searchParams.set('_cacheBust', Date.now().toString());
+  return fetchAndProcessData<AccessoryCost[]>(url.toString(), 'backpack-costs');
 };
 
 /**
  * Forces a refresh of the backpack cost data.
  */
 export const forceRefreshBackpackCostData = (): Promise<AccessoryCost[]> => {
-  const url = new URL(BACKPACK_COST_SHEET_URL);
-  url.searchParams.set('_cacheBust', Date.now().toString());
-  return fetchAndProcessData<AccessoryCost[]>(url.toString(), 'backpack-costs');
+  return getBackpackCostData();
 };
 
 // --- Task Data Functions ---
