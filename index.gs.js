@@ -1,7 +1,7 @@
 // --- CONFIGURATION ---
 const ORDER_SHEET_ID = '1_MC0BhvzSw5aUBCPg_E79leRNLtuYqXzAq9FqJcSao8';
-const ORDER_SHEET_NAME = 'Shipment Details'; 
-const PRICE_LIST_SHEET_NAME = 'Price List'; // Corrected from 'ETA Info'
+const ORDER_SHEET_NAME = 'db Order Summary'; 
+const PRICE_LIST_SHEET_NAME = 'db Price List'; // Corrected from 'ETA Info'
 const SERIALIZATION_SHEET_NAME = 'Serialization'; // For serialization data
 
 // Main function to handle POST requests from your web app
