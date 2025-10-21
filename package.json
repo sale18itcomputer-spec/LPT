@@ -9,13 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "framer-motion": "^11.3.19",
-    "@google/genai": "^0.15.0",
-    "apexcharts": "^3.51.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "framer-motion": "11.3.19",
+    "@google/genai": "0.15.0",
+    "apexcharts": "3.51.0",
     "react-apexcharts": "1.4.1",
-    "idb": "^8.0.0"
+    "idb": "8.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
