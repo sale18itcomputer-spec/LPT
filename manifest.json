@@ -1,0 +1,24 @@
+{
+  "short_name": "Limperial DB",
+  "name": "Limperial Technology Business Dashboard",
+  "description": "A comprehensive PWA dashboard to visualize, filter, and analyze business data. It provides key performance indicators, detailed breakdowns, and graphical representations of the data with offline capabilities.",
+  "icons": [
+    {
+      "src": "https://i.imgur.com/qcqIfrJ.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://i.imgur.com/qcqIfrJ.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#18181b",
+  "background_color": "#F9FAFB"
+}

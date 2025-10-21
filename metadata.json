@@ -1,0 +1,7 @@
+{
+  "name": "Limperial Technology Business Dashboard",
+  "description": "A comprehensive PWA dashboard to visualize, filter, and analyze business data. It provides key performance indicators, detailed breakdowns, and graphical representations of the data with offline capabilities.",
+  "requestFramePermissions": [
+    "clipboard-read"
+  ]
+}

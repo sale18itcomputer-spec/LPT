@@ -1,0 +1,52 @@
+
+import React from 'react';
+import { motion, type Variants } from 'framer-motion';
+import AnimatedCounter from './AnimatedCounter';
+
+const itemVariants: Variants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.4, ease: 'easeOut' } },
+};
+
+interface KpiCardProps {
+    label: string;
+    value: number;
+    icon: React.ReactElement<React.SVGProps<SVGSVGElement>>;
+    formatter?: (val: number) => string;
+    description?: React.ReactNode;
+    colorClass?: { bg: string; text: string };
+    onClick?: () => void;
+    isActive?: boolean;
+}
+
+const KpiCard = React.forwardRef<HTMLDivElement, KpiCardProps>(({ label, value, icon, formatter, description, colorClass, onClick, isActive }, ref) => {
+    const defaultColorClass = { bg: 'bg-highlight-hover dark:bg-dark-highlight-hover', text: 'text-highlight' };
+    const colors = colorClass || defaultColorClass;
+
+    const content = (
+        <div ref={ref} className={`relative p-4 rounded-lg transition-all duration-200 h-full flex flex-col justify-center ${onClick ? 'cursor-pointer' : ''} ${isActive ? 'ring-2 ring-highlight shadow-md' : 'shadow-sm hover:shadow-lg hover:-translate-y-1'} bg-secondary-bg dark:bg-dark-secondary-bg`}>
+            <div className="flex items-start justify-between">
+                <div className="flex-grow">
+                    <p className="text-sm font-medium text-secondary-text dark:text-dark-secondary-text">{label}</p>
+                    <div className="mt-1 text-3xl font-bold tracking-tight text-primary-text dark:text-dark-primary-text">
+                        <AnimatedCounter to={value || 0} formatter={formatter} />
+                    </div>
+                    {description && (
+                        <p className="mt-1 text-xs text-secondary-text dark:text-dark-secondary-text">{description}</p>
+                    )}
+                </div>
+                <div className={`flex-shrink-0 p-3 rounded-lg ml-4 ${colors.bg}`}>
+                    {React.cloneElement(icon, { className: `h-6 w-6 ${colors.text}` })}
+                </div>
+            </div>
+        </div>
+    );
+
+    return (
+      <motion.div onClick={onClick} variants={itemVariants} className="h-full">
+        {content}
+      </motion.div>
+    );
+});
+KpiCard.displayName = 'KpiCard';
+export default KpiCard;
