@@ -8,7 +8,6 @@ import { getCachedData, setCachedData } from '../utils/db';
 export const useOrderData = () => {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
-    productLines: [],
     mtms: [],
     factoryToSgps: [],
     statuses: [],

@@ -1,14 +1,19 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+
+
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+// FIX: Add `Variants` to framer-motion import to fix typing issues with animation variants.
+import { motion, AnimatePresence, useInView, type Variants } from 'framer-motion';
 import { useData } from '../../contexts/DataContext';
+import { useToast } from '../../contexts/ToastContext';
 import type { Order, DashboardType, ViewType, LocalFiltersState, OrderKpiData } from '../../types';
-import KpiCards from '../KpiCards';
+import OrderKpiCards from './OrderKpiCards';
 import OrderValueTrendChart from '../OrderValueTrendChart';
 import Card from '../ui/Card';
 import ChartCard from '../ui/ChartCard';
-import BacklogValueChart from '../BacklogValueChart';
-import LeadTimeAnalysisChart from '../LeadTimeAnalysisChart';
-import ProductLineValueChart from '../ProductLineValueChart';
 import OrderTable from '../OrderTable';
+import { ArrowUpIcon, FunnelIcon, XMarkIcon, ChartBarIcon } from '../ui/Icons';
+import { INITIAL_LOCAL_FILTERS } from '../../constants';
+import { calculateDatesForPreset, toYYYYMMDD } from '../../utils/dateHelpers';
 
 interface OrderDashboardProps {
     onRowClick: (order: Order) => void;
@@ -16,16 +21,41 @@ interface OrderDashboardProps {
     onPsrefLookup: (item: { mtm: string; modelName: string }) => void;
     localFilters: LocalFiltersState;
     onTrackShipment: (deliveryNumber: string) => void;
+    setLocalFilters: React.Dispatch<React.SetStateAction<LocalFiltersState>>;
 }
 
-const OrderDashboard: React.FC<OrderDashboardProps> = ({ onRowClick, onNavigateAndFilter, onPsrefLookup, localFilters, onTrackShipment }) => {
+// FIX: Explicitly typed animation variants with `Variants` from framer-motion to resolve type errors.
+const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.05 } } };
+// FIX: Replaced invalid cubic-bezier array for `ease` with a valid string literal 'easeOut' to fix typing errors.
+const itemVariants: Variants = { hidden: { y: 30, opacity: 0, scale: 0.97 }, visible: { y: 0, opacity: 1, scale: 1, transition: { duration: 0.6, ease: 'easeOut' } } };
+// FIX: Replaced invalid cubic-bezier array for `ease` with a valid string literal 'easeOut' to fix typing errors.
+const headerVariants: Variants = { hidden: { y: -20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { duration: 0.7, ease: 'easeOut' } } };
+// FIX: Explicitly typed animation variants with `Variants` from framer-motion to resolve type errors.
+const filterBadgeVariants: Variants = { initial: { scale: 0, opacity: 0 }, animate: { scale: 1, opacity: 1, transition: { type: 'spring', stiffness: 500, damping: 30 } }, exit: { scale: 0, opacity: 0, transition: { duration: 0.2 } } };
+
+
+const OrderDashboard: React.FC<OrderDashboardProps> = ({ onRowClick, onNavigateAndFilter, onPsrefLookup, localFilters, onTrackShipment, setLocalFilters }) => {
     
-    const { allOrders, totalOrderCount, allInvoicesCount, newModelMtms } = useData();
+    const { allOrders, totalOrderCount, newModelMtms } = useData();
+    const { showToast } = useToast();
+    const [showScrollTop, setShowScrollTop] = useState(false);
+    
+    const mainContentRef = useRef<HTMLDivElement>(null);
+    const kpiRef = useRef<HTMLDivElement>(null);
+    const isKpiInView = useInView(kpiRef, { once: true, margin: "-100px" });
+
+    // Scroll to top functionality
+    useEffect(() => {
+        const handleScroll = () => setShowScrollTop(window.scrollY > 400);
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     
     const locallyFilteredOrders = useMemo(() => {
-        const { orderSearchTerm, orderShow, orderProductLine, orderFactoryStatus, orderLocalStatus, orderStartDate, orderEndDate } = localFilters;
+        const { orderSearchTerm, orderShow, orderFactoryStatus, orderLocalStatus, orderStartDate, orderEndDate } = localFilters;
         let tempOrders = [...allOrders];
-        if (orderProductLine.length > 0) { tempOrders = tempOrders.filter(o => orderProductLine.includes(o.productLine)); }
         if (orderFactoryStatus.length > 0) { tempOrders = tempOrders.filter(o => orderFactoryStatus.includes(o.factoryToSgp)); }
         if (orderLocalStatus.length > 0) { tempOrders = tempOrders.filter(o => orderLocalStatus.includes(o.status)); }
         if (orderStartDate || orderEndDate) {
@@ -68,39 +98,159 @@ const OrderDashboard: React.FC<OrderDashboardProps> = ({ onRowClick, onNavigateA
             avgOrderValue,
         };
     }, [locallyFilteredOrders]);
+    
+    const activeFiltersCount = useMemo(() => {
+        let count = 0;
+        if (localFilters.orderSearchTerm) count++;
+        if (localFilters.orderShow !== 'all') count++;
+        if (localFilters.orderFactoryStatus.length > 0) count++;
+        if (localFilters.orderLocalStatus.length > 0) count++;
+        if (localFilters.orderDateRangePreset !== 'thisYear' && localFilters.orderDateRangePreset !== 'all') count++;
+        return count;
+    }, [localFilters]);
+
+    const clearAllFilters = useCallback(() => {
+        setLocalFilters(prev => ({
+            ...prev,
+            orderSearchTerm: '',
+            orderShow: 'all',
+            orderFactoryStatus: [],
+            orderLocalStatus: [],
+            orderDateRangePreset: 'thisYear',
+            orderYear: 'all',
+            orderQuarter: 'all',
+            orderStartDate: INITIAL_LOCAL_FILTERS.orderStartDate,
+            orderEndDate: INITIAL_LOCAL_FILTERS.orderEndDate,
+        }));
+        showToast('All order filters cleared', 'success');
+    }, [setLocalFilters, showToast]);
+
 
     const handleNavigate = (target: DashboardType, searchTerm: string) => {
         onNavigateAndFilter(target, { [target === 'orders' ? 'orderSearchTerm' : 'salesSearchTerm']: searchTerm });
     };
 
+    const selectedPeriodKey = useMemo(() => {
+        if (localFilters.orderDateRangePreset !== 'custom' || !localFilters.orderStartDate || !localFilters.orderEndDate) return null;
+        try {
+            const date = new Date(localFilters.orderStartDate + 'T00:00:00Z');
+            const endDate = new Date(localFilters.orderEndDate + 'T00:00:00Z');
+            const expectedEndDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0));
+            
+            // Check if start is the 1st of the month and end date is the last day of the same month
+            if (date.getUTCDate() === 1 && endDate.getTime() === expectedEndDate.getTime()) {
+                return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+            }
+            return null;
+        } catch(e) {
+            return null;
+        }
+    }, [localFilters.orderStartDate, localFilters.orderEndDate, localFilters.orderDateRangePreset]);
+
+
     return (
-        <div className="px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 pt-6 lg:pt-8">
-            <KpiCards orderKpiData={orderKpiData} totalOrderCount={totalOrderCount} allInvoicesCount={allInvoicesCount} />
-            <ChartCard title="Order Value Trend" description="Monthly value of orders by Order Receipt Date." className="h-[400px]">
-                <OrderValueTrendChart orders={locallyFilteredOrders} />
-            </ChartCard>
-            <section>
-                <h2 className="text-xl md:text-2xl font-semibold text-primary-text tracking-tight mb-4">Order Health & Composition</h2>
-                <div className="grid grid-cols-fluid gap-4 sm:gap-6">
-                    <ChartCard title="Backlog Analysis by Age" description="Breakdown of open order value by age and product line." className="h-[400px]"><BacklogValueChart orders={locallyFilteredOrders} /></ChartCard>
-                    <ChartCard title="Lead Time Distribution" description="Box plot showing lead time spread, median, and outliers." className="h-[400px]"><LeadTimeAnalysisChart orders={locallyFilteredOrders} /></ChartCard>
-                    <ChartCard title="Order Value by Product Line" description="Click a slice to filter orders by product line." className="h-[400px]"><ProductLineValueChart orders={locallyFilteredOrders} /></ChartCard>
+        <main className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 space-y-8" ref={mainContentRef}>
+             <motion.div 
+                variants={headerVariants} 
+                initial="hidden" 
+                animate="visible"
+                className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 dark:from-indigo-700 dark:via-purple-700 dark:to-fuchsia-700 p-8 shadow-xl"
+            >
+                <div className="relative z-10">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.2, duration: 0.5 }}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 mb-4"
+                    >
+                        <ChartBarIcon className="h-5 w-5 text-white" />
+                        <span className="text-sm font-semibold text-white">Analytics Dashboard</span>
+                    </motion.div>
+                    <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Order Analytics</h1>
+                    <p className="text-purple-100 text-lg mb-4">Track backlogs, lead times, and overall order health.</p>
+
+                     {activeFiltersCount > 0 && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-center gap-3 flex-wrap"
+                        >
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/25 backdrop-blur-sm border border-white/40">
+                                <FunnelIcon className="h-4 w-4 text-white" />
+                                <span className="text-sm font-semibold text-white">
+                                    {activeFiltersCount} Active {activeFiltersCount === 1 ? 'Filter' : 'Filters'}
+                                </span>
+                            </div>
+                             <AnimatePresence mode="popLayout">
+                                {localFilters.orderShow !== 'all' && (
+                                     <motion.button key="show-filter" variants={filterBadgeVariants} initial="initial" animate="animate" exit="exit" onClick={() => setLocalFilters(prev => ({...prev, orderShow: 'all'}))} className="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 hover:bg-white text-indigo-700 text-sm font-medium transition-colors">
+                                        <span>Show: {localFilters.orderShow}</span><XMarkIcon className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+                                    </motion.button>
+                                )}
+                            </AnimatePresence>
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={clearAllFilters} className="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 border border-white/40 text-white text-sm font-medium transition-colors">
+                                Clear All
+                            </motion.button>
+                        </motion.div>
+                    )}
                 </div>
-            </section>
-            <div className="pb-4 sm:pb-6">
-                <Card className="p-4 sm:p-6">
-                    <OrderTable 
-                        orders={locallyFilteredOrders} 
-                        totalOrderCount={totalOrderCount} 
-                        onRowClick={onRowClick} 
-                        onNavigateAndFilter={handleNavigate} 
-                        newModelMtms={newModelMtms} 
-                        onPsrefLookup={onPsrefLookup} 
-                        onTrackShipment={onTrackShipment}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                <div className="absolute bottom-0 left-0 w-72 h-72 bg-fuchsia-500/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+            </motion.div>
+
+            <motion.div ref={kpiRef} initial="hidden" animate={isKpiInView ? "visible" : "hidden"} variants={containerVariants}>
+                <OrderKpiCards kpiData={orderKpiData} />
+            </motion.div>
+            
+            <motion.div initial="hidden" animate="visible" variants={containerVariants}>
+                <ChartCard title="Order Value Trend" description="Monthly value of orders by Order Receipt Date." className="h-[400px]">
+                    <OrderValueTrendChart
+                        orders={locallyFilteredOrders}
+                        selectedPeriodKey={selectedPeriodKey}
                     />
+                </ChartCard>
+            </motion.div>
+            
+            <motion.div 
+                variants={itemVariants} 
+                initial="hidden" 
+                animate="visible" 
+                transition={{ delay: 0.6 }}
+                className="rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-shadow duration-300"
+            >
+                <Card title="Order Details" description={`${locallyFilteredOrders.length} line items matching filters`} className="p-0">
+                    <div className="p-4 sm:p-6 pt-0">
+                        <OrderTable 
+                            orders={locallyFilteredOrders} 
+                            totalOrderCount={totalOrderCount} 
+                            onRowClick={onRowClick} 
+                            onNavigateAndFilter={handleNavigate} 
+                            newModelMtms={newModelMtms} 
+                            onPsrefLookup={onPsrefLookup} 
+                            onTrackShipment={onTrackShipment}
+                        />
+                    </div>
                 </Card>
-            </div>
-        </div>
+            </motion.div>
+            
+            <AnimatePresence>
+                {showScrollTop && (
+                    <motion.button
+                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={scrollToTop}
+                        className="fixed bottom-8 right-8 z-50 p-4 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-2xl hover:shadow-purple-500/50 transition-shadow duration-300"
+                        title="Scroll to top"
+                    >
+                        <ArrowUpIcon className="h-6 w-6" />
+                    </motion.button>
+                )}
+            </AnimatePresence>
+
+        </main>
     );
 };
 

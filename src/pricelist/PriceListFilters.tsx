@@ -1,4 +1,6 @@
-import React from 'react';
+
+
+import React, { useCallback } from 'react';
 import type { LocalFiltersState } from '../../types';
 import Select from '../ui/Select';
 import { GlobeAltIcon, CheckCircleIcon, FireIcon, XCircleIcon } from '../ui/Icons';
@@ -7,7 +9,6 @@ import { GlobeAltIcon, CheckCircleIcon, FireIcon, XCircleIcon } from '../ui/Icon
 interface PriceListFiltersProps {
   localFilters: LocalFiltersState;
   setLocalFilters: React.Dispatch<React.SetStateAction<LocalFiltersState>>;
-  productLineOptions: string[];
 }
 
 const stockStatusOptions: { label: string; value: LocalFiltersState['priceListStockStatus']; icon: React.FC<any> }[] = [
@@ -17,11 +18,14 @@ const stockStatusOptions: { label: string; value: LocalFiltersState['priceListSt
     { label: 'Out of Stock', value: 'outOfStock', icon: XCircleIcon },
 ];
 
-const PriceListFilters: React.FC<PriceListFiltersProps> = ({ localFilters, setLocalFilters, productLineOptions }) => {
+const PriceListFilters: React.FC<PriceListFiltersProps> = ({ localFilters, setLocalFilters }) => {
   
-  const handleFilterChange = <K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
-    setLocalFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
+    setLocalFilters(prev => {
+        if (prev[key] === value) return prev;
+        return { ...prev, [key]: value };
+    });
+  }, [setLocalFilters]);
 
   return (
     <>
@@ -34,14 +38,6 @@ const PriceListFilters: React.FC<PriceListFiltersProps> = ({ localFilters, setLo
           value={localFilters.priceListSearchTerm}
           onChange={(e) => handleFilterChange('priceListSearchTerm', e.target.value)}
           className="block w-full bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1.5 px-3 text-primary-text dark:text-dark-primary-text placeholder-secondary-text dark:placeholder-dark-secondary-text focus:outline-none focus:ring-2 focus:ring-highlight sm:text-sm"
-        />
-      </div>
-      <div>
-         <Select
-            label="Product Line"
-            value={localFilters.priceListProductLine}
-            onChange={(v) => handleFilterChange('priceListProductLine', v)}
-            options={productLineOptions}
         />
       </div>
        <div>

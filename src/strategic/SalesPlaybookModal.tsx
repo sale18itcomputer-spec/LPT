@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// @google/genai-sdk fix: Updated import from "@google/ai" to "@google/genai" to use the correct library.
 import { GoogleGenAI, Type } from "@google/genai";
 import { XMarkIcon, SparklesIcon, DocumentDuplicateIcon, CheckIcon, LightBulbIcon, ChatBubbleLeftRightIcon, EnvelopeIcon, DocumentTextIcon, ExclamationTriangleIcon } from '../ui/Icons';
 import ModalPanel from '../ui/ModalPanel';

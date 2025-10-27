@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// @google/genai-sdk fix: Updated import from "@google/ai" to "@google/genai" to use the correct library.
 import { GoogleGenAI, Type } from "@google/genai";
 import { SparklesIcon, ExclamationTriangleIcon } from '../ui/Icons';
 import type { Customer } from '../../types';
@@ -20,16 +19,13 @@ const AIProfileAnalysis: React.FC<{ customer: Customer }> = ({ customer }) => {
 
     const generatePrompt = useCallback(() => {
         const topProducts = Object.entries(
-            // FIX: Explicitly type the accumulator in the reduce function to ensure correct type inference.
             customer.sales.reduce((acc: Record<string, number>, sale) => {
                 acc[sale.modelName] = (acc[sale.modelName] || 0) + sale.totalRevenue;
                 return acc;
             }, {} as Record<string, number>)
         )
-        // FIX: Explicitly type sort parameters `a` and `b` to fix type inference.
         .sort((a: [string, number], b: [string, number]) => b[1] - a[1])
         .slice(0, 5)
-        // FIX: Explicitly type map parameters `name` and `revenue` to fix type inference.
         .map(([name, revenue]: [string, number]) => `- ${name} ($${revenue.toFixed(0)})`)
         .join('\n');
 
@@ -80,7 +76,6 @@ Analyze the customer data and generate a concise, actionable analysis. Return a 
                 config: { temperature: 0.6, responseMimeType: "application/json", responseSchema: schema }
             });
 
-            // @google/genai-sdk fix: Access text output correctly from the response object.
             setAnalysis(JSON.parse(response.text));
 
         } catch (err) {

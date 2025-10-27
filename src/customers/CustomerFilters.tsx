@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { LocalFiltersState, CustomerTier } from '../../types';
 import MultiSelect from '../ui/MultiSelect';
 import { GlobeAltIcon, FireIcon, UserPlusIcon, UserMinusIcon } from '../ui/Icons';
@@ -18,9 +18,12 @@ const statusOptions: { label: string; value: LocalFiltersState['customerStatus']
 
 const CustomerFilters: React.FC<CustomerFiltersProps> = ({ localFilters, setLocalFilters }) => {
 
-  const handleFilterChange = <K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
-    setLocalFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
+    setLocalFilters(prev => {
+        if (JSON.stringify(prev[key]) === JSON.stringify(value)) return prev;
+        return { ...prev, [key]: value };
+    });
+  }, [setLocalFilters]);
 
   const TIER_OPTIONS: CustomerTier[] = ['Platinum', 'Gold', 'Silver', 'Bronze'];
 

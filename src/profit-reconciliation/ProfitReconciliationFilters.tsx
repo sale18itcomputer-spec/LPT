@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { LocalFiltersState } from '../../types';
 import { GlobeAltIcon, ShieldCheckIcon, ExclamationTriangleIcon } from '../ui/Icons';
 
@@ -16,9 +16,12 @@ const statusOptions: { label: string; value: LocalFiltersState['profitReconStatu
 
 const ProfitReconciliationFilters: React.FC<ProfitReconciliationFiltersProps> = ({ localFilters, setLocalFilters }) => {
 
-  const handleFilterChange = <K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
-    setLocalFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
+    setLocalFilters(prev => {
+        if (prev[key] === value) return prev;
+        return { ...prev, [key]: value };
+    });
+  }, [setLocalFilters]);
 
   return (
     <>

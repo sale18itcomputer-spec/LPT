@@ -6,7 +6,6 @@ import { useData } from '../../contexts/DataContext';
 import Card from '../ui/Card';
 import KpiCard from '../ui/KpiCard';
 import { RebateProgram, RebateDetail, RebateSale, LocalFiltersState } from '../../types';
-// FIX: Add missing icon import
 import { BanknotesIcon, ExclamationTriangleIcon, TrophyIcon, DocumentMagnifyingGlassIcon, ChevronUpIcon, ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon, ArrowDownTrayIcon } from '../ui/Icons';
 import RebateDetailTable from './RebateDetailTable';
 import { exportDataToCsv } from '../../utils/csv';
@@ -92,7 +91,7 @@ interface RebateProgramsPageProps {
     localFilters: LocalFiltersState;
 }
 
-const RebateProgramsPage: React.FC<RebateProgramsPageProps> = ({ localFilters }) => {
+export const RebateProgramsPage: React.FC<RebateProgramsPageProps> = ({ localFilters }) => {
     const { allRebates, rebateKpiData, allRebateDetails, allRebateSales } = useData();
     const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'startDate', direction: 'desc' });
     const [expandedProgram, setExpandedProgram] = useState<string | null>(null);
@@ -214,9 +213,9 @@ const RebateProgramsPage: React.FC<RebateProgramsPageProps> = ({ localFilters })
         if (rebateSearchTerm) {
             const lower = rebateSearchTerm.toLowerCase();
             filteredData = filteredData.filter(item =>
-                item.program.toLowerCase().includes(lower) ||
-                item.lenovoQuarter.toLowerCase().includes(lower) ||
-                (item.creditNo && item.creditNo.toLowerCase().includes(lower))
+                (item.program || '').toLowerCase().includes(lower) ||
+                (item.lenovoQuarter || '').toLowerCase().includes(lower) ||
+                (item.creditNo || '').toLowerCase().includes(lower)
             );
         }
 
@@ -440,98 +439,3 @@ const RebateProgramsPage: React.FC<RebateProgramsPageProps> = ({ localFilters })
                                             <div className="p-4">
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="font-bold text-lg text-primary-text">{item.program}</p>
-                                                        <p className="text-sm text-secondary-text">{item.lenovoQuarter}</p>
-                                                    </div>
-                                                    <ChevronRightIcon className="h-6 w-6 text-secondary-text" />
-                                                </div>
-                                                <div className="mt-4 space-y-2"><ProgramDurationProgress startDate={item.startDate} endDate={item.endDate} /><div className="flex items-center justify-between"><StatusBadge status={item.status} /><UpdateBadge update={item.update} /></div></div>
-                                                <div className="mt-4 grid grid-cols-2 gap-4 text-center border-t border-border-color pt-3">
-                                                    <div><p className="text-xs text-secondary-text">Tracked Sales</p><p className="font-bold text-primary-text">{item.totalTrackedSales.toLocaleString()}</p></div>
-                                                    <div><p className="text-xs text-secondary-text">Potential</p><p className="font-bold text-green-600">{item.totalPotentialRebate > 0 ? currencyFormatter(item.totalPotentialRebate) : '-'}</p></div>
-                                                </div>
-                                            </div>
-                                        </Card>
-                                    ))}
-                                </motion.div>
-                            )}
-
-                             {selectedProgram && !selectedMtm && (
-                                <motion.div key="mtms" custom={direction} variants={viewVariants} initial="enter" animate="center" exit="exit" transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }} className="absolute w-full">
-                                    <div className="pb-4 mb-4 border-b border-border-color"><button onClick={handleBack} className="flex items-center text-sm font-medium text-highlight mb-2"><ChevronLeftIcon className="h-4 w-4 mr-1" /> Back to Programs</button><h2 className="text-xl font-bold">{selectedProgram.program}</h2><p className="text-sm text-secondary-text">Select an MTM to view sales</p></div>
-                                    <div className="space-y-3">
-                                        {mtmsForSelectedProgram.length > 0 ? mtmsForSelectedProgram.map(mtm => (
-                                            <Card key={`${mtm.mtm}-${mtm.startDate}`} className="p-3" onClick={() => handleSelectMtm(mtm)}>
-                                                <div className="flex justify-between items-center"><div className="flex-1 min-w-0"><p className="font-semibold text-primary-text">{mtm.mtm}</p><p className="text-xs text-secondary-text">Per Unit: {currencyFormatter(mtm.perUnit)}</p></div><ChevronRightIcon className="h-5 w-5 text-secondary-text" /></div>
-                                                <div className="text-sm mt-2 pt-2 border-t">Tracked Sales: <span className="font-bold">{mtm.trackedSalesQty}</span> / Potential: <span className="font-bold text-green-600">{currencyFormatter(mtm.potentialRebate)}</span></div>
-                                            </Card>
-                                        )) : <p className="text-center text-secondary-text py-8">No MTMs for this program.</p>}
-                                    </div>
-                                </motion.div>
-                             )}
-                            
-                             {selectedMtm && (
-                                <motion.div key="sales" custom={direction} variants={viewVariants} initial="enter" animate="center" exit="exit" transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }} className="absolute w-full">
-                                    <div className="pb-4 mb-4 border-b border-border-color"><button onClick={handleBack} className="flex items-center text-sm font-medium text-highlight mb-2"><ChevronLeftIcon className="h-4 w-4 mr-1" /> Back to MTMs</button><h2 className="text-xl font-bold">{selectedMtm.mtm}</h2><p className="text-sm text-secondary-text">Eligible sales for "{selectedProgram?.program}"</p></div>
-                                    <div className="space-y-2">
-                                        {salesForSelectedMtm.length > 0 ? salesForSelectedMtm.map((sale, i) => (
-                                            <Card key={`${sale.invoiceNumber}-${i}`} className="p-3 text-sm">
-                                                <div className="flex justify-between font-semibold"><p>{sale.invoiceNumber}</p><p>{currencyFormatter(sale.unitBPReportedPrice)}</p></div>
-                                                <div className="flex justify-between text-xs text-secondary-text mt-1"><p>{sale.rebateInvoiceDate}</p><p>QTY: {sale.quantity}</p></div>
-                                            </Card>
-                                        )) : <p className="text-center text-secondary-text py-8">No sales for this MTM in this period.</p>}
-                                    </div>
-                                </motion.div>
-                             )}
-                        </AnimatePresence>
-                    </div>
-
-                    {totalPages > 1 && !selectedProgram && (
-                        <div className="py-3 flex flex-col sm:flex-row items-center justify-center sm:justify-between border-t border-border-color dark:border-dark-border-color mt-4 gap-4">
-                            <div>
-                                <p className="text-sm text-secondary-text dark:text-dark-secondary-text">
-                                    Showing <span className="font-medium">{sortedAndFilteredData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> to <span className="font-medium">{Math.min(currentPage * itemsPerPage, sortedAndFilteredData.length)}</span> of{' '}
-                                    <span className="font-medium">{sortedAndFilteredData.length}</span> programs
-                                </p>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <label htmlFor="items-per-page-select-rebate-programs" className="text-sm text-secondary-text dark:text-dark-secondary-text">Rows:</label>
-                                <select
-                                    id="items-per-page-select-rebate-programs"
-                                    value={itemsPerPage}
-                                    onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                                    className="bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1 px-2 text-primary-text dark:text-dark-primary-text text-sm focus:ring-highlight focus:border-highlight"
-                                >
-                                    <option value="15">15</option>
-                                    <option value="30">30</option>
-                                    <option value="50">50</option>
-                                </select>
-                                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text hover:bg-gray-100 dark:hover:bg-dark-primary-bg disabled:opacity-50 transition-colors"
-                                    >
-                                        Previous
-                                    </button>
-                                    <span className="relative inline-flex items-center px-4 py-2 border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text">
-                                        {currentPage} / {totalPages}
-                                    </span>
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text hover:bg-gray-100 dark:hover:bg-dark-primary-bg disabled:opacity-50 transition-colors"
-                                    >
-                                        Next
-                                    </button>
-                                </nav>
-                            </div>
-                        </div>
-                    )}
-                </Card>
-            </motion.div>
-        </main>
-    );
-};
-
-export default RebateProgramsPage;

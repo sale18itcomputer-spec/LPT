@@ -3,12 +3,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Card from './ui/Card';
-// FIX: Replace ArrowRightIcon with ArrowLongRightIcon
 import { ExclamationTriangleIcon, CheckCircleIcon, ClipboardDocumentListIcon, ArrowLongRightIcon, XMarkIcon } from './ui/Icons';
 import { appendSheetData } from '../services/googleScriptService';
 
 const SHEET_HEADERS = [
-    'Product Line', 'Sales Order Number', 'MTM', 'Model Name', 'Specification',
+    'Sales Order Number', 'MTM', 'Model Name', 'Specification',
     'Shipping Quantity', 'Date issue PI', 'Unit Price', 'Add on Unit Price', 'BackPack',
     'Shipping fee', 'Amount ( $ )', 'Factory to SGP', 'SGP to KH', 'Status',
     'Lenovo Support', 'Schedule Ship Date', 'Commercial Invoice', 'Serial Number',

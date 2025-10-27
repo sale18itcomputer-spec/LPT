@@ -1,23 +1,64 @@
+
+
 import React from 'react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { GoogleGenAI, Type } from "@google/genai";
+
 
 // --- Component & UI Imports ---
 import Header from './Header';
 import DashboardSkeleton from './DashboardSkeleton';
 import OrderDetailsModal from './OrderDetailsModal';
+import ErrorBoundary from './ui/ErrorBoundary';
 import { ExclamationTriangleIcon } from './ui/Icons';
 import FilterManager from './ui/FilterManager';
 import BottomNavBar from './BottomNavBar';
 import MobileMenu from './MobileMenu';
 import UpdateBanner from './ui/UpdateBanner';
+import TrackingSidebar from './shipments/TrackingSidebar';
 
 // --- Dashboard View Imports ---
-import { DASHBOARD_COMPONENTS, FILTER_COMPONENTS } from './dashboardConfig';
+import OrderDashboard from './orders/OrderDashboard';
+import SalesDashboard from './sales/SalesDashboard';
+import TasksDashboard from './tasks/TasksDashboard';
+import InventoryDashboard from './inventory/InventoryDashboard';
+import CustomerDashboard from './customers/CustomerDashboard';
+import StrategicSalesDashboard from './strategic/StrategicSalesDashboard';
+import BackorderAnalysisDashboard from './backorders/BackorderAnalysisDashboard';
+import PromotionsDashboard from './promotions/PromotionsDashboard';
+import UserProfile from './UserProfile';
+import AddOrdersPage from './addOrdersPage';
+import DataTransformer from './transformer/DataTransformer';
+import PriceListPage from './pricelist/PriceListPage';
+import SerializationPage from './serialization/SerializationPage';
+import { RebateProgramsPage } from './rebates/RebateProgramsPage';
+import RebateValidationPage from './rebates/RebateValidationPage';
+import ShipmentsPage from './shipments/ShipmentsPage';
+import ProfitReconciliationPage from './profit-reconciliation/ProfitReconciliationPage';
+import AccessoryCostsPage from './accessory/AccessoryCostsPage';
+import LandedCostAnalysisPage from './operations/LandedCostAnalysisPage';
+import OrderVsSalePage from './operations/OrderVsSalePage';
+
+// --- Filter Component Imports ---
+import OrderFilters from './orders/OrderFilters';
+import SalesFilters from './sales/SalesFilters';
+import InventoryFilters from './inventory/InventoryFilters';
+import CustomerFilters from './customers/CustomerFilters';
+import StrategicFilters from './strategic/StrategicFilters';
+import BackorderFilters from './backorders/BackorderFilters';
+import PromotionsFilters from './promotions/PromotionsFilters';
+import PriceListFilters from './pricelist/PriceListFilters';
+import RebateFilters from './rebates/RebateFilters';
+import ShipmentFilters from './shipments/ShipmentFilters';
+import ProfitReconciliationFilters from './profit-reconciliation/ProfitReconciliationFilters';
+import OrderVsSaleFilters from './operations/filters/OrderVsSaleFilters';
+import TasksFilters from './tasks/TasksFilters';
 
 // --- Contexts, Types, and Constants ---
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { Order, ViewType, LocalFiltersState } from '../types';
 import { INITIAL_LOCAL_FILTERS } from '../constants';
 
@@ -63,6 +104,7 @@ const useScrollableHeader = (headerRef: React.RefObject<HTMLElement>) => {
 const Dashboard: React.FC = () => {
     const { user } = useAuth();
     const dataContext = useData();
+    const { showToast } = useToast();
     const headerRef = useRef<HTMLDivElement>(null);
 
     // --- State Management ---
@@ -72,21 +114,26 @@ const Dashboard: React.FC = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showRefreshBanner, setShowRefreshBanner] = useState(false);
     const [sidebarActionsContent, setSidebarActionsContent] = useState<React.ReactNode | null>(null);
+    const [trackingSidebarState, setTrackingSidebarState] = useState<{ isOpen: boolean; shipmentNumber: string | null }>({ isOpen: false, shipmentNumber: null });
+
     
     // Centralized filter state
     const [localFilters, setLocalFilters] = useState<LocalFiltersState>(INITIAL_LOCAL_FILTERS);
     const resetLocalFilters = useCallback(() => setLocalFilters(INITIAL_LOCAL_FILTERS), []);
     const hasActiveLocalFilters = useMemo(() => JSON.stringify(localFilters) !== JSON.stringify(INITIAL_LOCAL_FILTERS), [localFilters]);
+
+    // State for AI-powered sales filters
+    const [aiFilteredBuyers, setAiFilteredBuyers] = useState<string[] | null>(null);
+    const [isBuyerRegionLoading, setIsBuyerRegionLoading] = useState(false);
     
     // --- Custom Hooks & Memoization ---
     const isHeaderVisible = useScrollableHeader(headerRef);
-    const ActiveDashboardComponent = useMemo(() => DASHBOARD_COMPONENTS[activeView] || DASHBOARD_COMPONENTS.orders, [activeView]);
 
     if (!dataContext) {
         throw new Error("Dashboard must be used within a DataProvider");
     }
 
-    const { isLoading, isRefreshing, error, handleGlobalRefresh, lastUpdated, availableFilterOptions, newModelMtms, inventoryData } = dataContext;
+    const { isLoading, isRefreshing, error, handleGlobalRefresh, lastUpdated, orderFilterOptions, newModelMtms, inventoryData, allSales } = dataContext;
 
     // --- Handlers and Callbacks ---
     const handleAddOrdersSuccess = useCallback(() => {
@@ -98,6 +145,10 @@ const Dashboard: React.FC = () => {
         sessionStorage.setItem('_nav_filters', JSON.stringify(filters));
         setActiveView(view);
     }, []);
+
+     const handleTrackShipment = useCallback((deliveryNumber: string) => {
+        setTrackingSidebarState({ isOpen: true, shipmentNumber: deliveryNumber });
+    }, []);
     
     const handlePsrefLookup = useCallback((item: { mtm: string; modelName: string }) => {
         const keywords = ['abyss', 'arctic', 'black', 'blue', 'bronze', 'cloud', 'cosmic', 'eclipse', 'glacier', 'gold', 'graphite', 'gray', 'green', 'grey', 'iron', 'luna', 'mica', 'mineral', 'onyx', 'pink', 'platinum', 'purple', 'red', 'shadow', 'silver', 'storm', 'teal', 'tidal', 'white'];
@@ -108,6 +159,52 @@ const Dashboard: React.FC = () => {
         const url = `https://psref.lenovo.com/Detail/${modelSlug}?M=${encodeURIComponent(item.mtm)}`;
         window.open(url, '_blank', 'noopener,noreferrer');
     }, []);
+
+    const allBuyerNames = useMemo(() => [...new Set(allSales.map(s => s.buyerName))], [allSales]);
+
+    const handleBuyerRegionSearch = useCallback(async (region: string) => {
+        setLocalFilters(prev => ({ ...prev, salesBuyerRegion: region, salesBuyer: [] }));
+
+        if (!region.trim()) {
+            setAiFilteredBuyers(null);
+            return;
+        }
+
+        setIsBuyerRegionLoading(true);
+        try {
+            if (!process.env.API_KEY) throw new Error("API key is not configured.");
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            
+            const prompt = `Given this list of company names in Cambodia: ${JSON.stringify(allBuyerNames)}, identify which are most likely located or primarily operate in "${region}". Return ONLY a JSON array of strings with exact matching company names.`;
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+                config: {
+                    temperature: 0.1,
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING }
+                    },
+                },
+            });
+
+            const result = JSON.parse(response.text);
+            setAiFilteredBuyers(result);
+            if (result.length === 0) {
+                showToast(`AI found no buyers matching "${region}".`, 'info');
+            }
+
+        } catch (err) {
+            console.error("Error fetching buyers by region:", err);
+            showToast(err instanceof Error ? `AI search failed: ${err.message}` : 'An AI search error occurred.', 'error');
+            setAiFilteredBuyers([]);
+        } finally {
+            setIsBuyerRegionLoading(false);
+        }
+    }, [allBuyerNames, showToast, setLocalFilters]);
+
 
     // --- Effects ---
 
@@ -125,6 +222,7 @@ const Dashboard: React.FC = () => {
     useEffect(() => {
         resetLocalFilters();
         setSidebarActionsContent(null);
+        setAiFilteredBuyers(null); // Clear AI filter on view change
 
         const navFiltersRaw = sessionStorage.getItem('_nav_filters');
         if (navFiltersRaw) {
@@ -159,10 +257,39 @@ const Dashboard: React.FC = () => {
 
     // --- Dynamic Component Rendering ---
     
-    // Select the correct filter UI based on the active view
-    const FilterComponentForView = useMemo(() => FILTER_COMPONENTS[activeView], [activeView]);
-
     const renderContent = () => {
+        let ActiveDashboardComponent: React.FC<any>;
+        let FilterComponentForView: React.FC<any> | null = null;
+
+        switch (activeView) {
+            case 'orders': ActiveDashboardComponent = OrderDashboard; FilterComponentForView = OrderFilters; break;
+            case 'sales': ActiveDashboardComponent = SalesDashboard; FilterComponentForView = SalesFilters; break;
+            case 'tasks': ActiveDashboardComponent = TasksDashboard; FilterComponentForView = TasksFilters; break;
+            case 'inventory': ActiveDashboardComponent = InventoryDashboard; FilterComponentForView = InventoryFilters; break;
+            case 'customers': ActiveDashboardComponent = CustomerDashboard; FilterComponentForView = CustomerFilters; break;
+            case 'strategic': ActiveDashboardComponent = StrategicSalesDashboard; FilterComponentForView = StrategicFilters; break;
+            case 'backorders': ActiveDashboardComponent = BackorderAnalysisDashboard; FilterComponentForView = BackorderFilters; break;
+            case 'promotions': ActiveDashboardComponent = PromotionsDashboard; FilterComponentForView = PromotionsFilters; break;
+            case 'profile': ActiveDashboardComponent = UserProfile; FilterComponentForView = null; break;
+            case 'add-orders': ActiveDashboardComponent = AddOrdersPage; FilterComponentForView = null; break;
+            case 'data-transformer': ActiveDashboardComponent = DataTransformer; FilterComponentForView = null; break;
+            case 'price-list': ActiveDashboardComponent = PriceListPage; FilterComponentForView = PriceListFilters; break;
+            case 'serialization': ActiveDashboardComponent = SerializationPage; FilterComponentForView = null; break;
+            case 'rebates': ActiveDashboardComponent = RebateProgramsPage; FilterComponentForView = RebateFilters; break;
+            case 'rebate-validation': ActiveDashboardComponent = RebateValidationPage; FilterComponentForView = null; break;
+            case 'shipments': ActiveDashboardComponent = ShipmentsPage; FilterComponentForView = ShipmentFilters; break;
+            case 'profit-reconciliation': ActiveDashboardComponent = ProfitReconciliationPage; FilterComponentForView = ProfitReconciliationFilters; break;
+            case 'accessory-costs': ActiveDashboardComponent = AccessoryCostsPage; FilterComponentForView = null; break;
+            case 'landed-cost-analysis': ActiveDashboardComponent = LandedCostAnalysisPage; FilterComponentForView = null; break;
+            case 'order-vs-sale': ActiveDashboardComponent = OrderVsSalePage; FilterComponentForView = OrderVsSaleFilters; break;
+            default: ActiveDashboardComponent = OrderDashboard; FilterComponentForView = OrderFilters; break;
+        }
+
+        if (!ActiveDashboardComponent) {
+            console.error(`Missing component for view: ${activeView}`);
+            return <div className="p-4">Component not found for {activeView}</div>;
+        }
+        
         if (error) {
             return (
                 <div className="flex items-center justify-center min-h-[calc(100vh-140px)] p-4">
@@ -199,9 +326,10 @@ const Dashboard: React.FC = () => {
                         <FilterComponentForView
                             localFilters={localFilters}
                             setLocalFilters={setLocalFilters}
-                            {...( (activeView === 'inventory' || activeView === 'price-list') && 
-                                { productLineOptions: availableFilterOptions.orders.productLines }
-                            )}
+                             {...(activeView === 'sales' && {
+                                onBuyerRegionSearch: handleBuyerRegionSearch,
+                                isBuyerRegionLoading: isBuyerRegionLoading
+                            })}
                         />
                     </FilterManager>
                 )}
@@ -215,14 +343,18 @@ const Dashboard: React.FC = () => {
                             transition={{ duration: 0.25, ease: 'easeInOut' }}
                             className="h-full"
                         >
-                             <ActiveDashboardComponent
-                                {...commonDashboardProps}
-                                // View-specific props are passed here
-                                {...(activeView === 'orders' && { onRowClick: setSelectedOrder, onTrackShipment: console.log })}
-                                {...(activeView === 'inventory' && { inventoryData })}
-                                {...(activeView === 'add-orders' && { onSaveSuccess: handleAddOrdersSuccess })}
-                                {...(activeView === 'tasks' && { setSidebarActionsContent })}
-                            />
+                             <ErrorBoundary>
+                                <ActiveDashboardComponent
+                                    {...commonDashboardProps}
+                                    // View-specific props are passed here
+                                    {...(activeView === 'orders' && { onRowClick: setSelectedOrder, onTrackShipment: handleTrackShipment })}
+                                    {...(activeView === 'inventory' && { inventoryData })}
+                                    {...(activeView === 'add-orders' && { onSaveSuccess: handleAddOrdersSuccess })}
+                                    {...(activeView === 'tasks' && { setSidebarActionsContent })}
+                                    {...(activeView === 'sales' && { aiFilteredBuyers })}
+                                    {...(activeView === 'shipments' && { onTrackShipment: handleTrackShipment })}
+                                />
+                             </ErrorBoundary>
                         </MotionDiv>
                     </AnimatePresence>
                 </main>
@@ -255,7 +387,8 @@ const Dashboard: React.FC = () => {
             
             {renderContent()}
             
-            <OrderDetailsModal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} order={selectedOrder} newModelMtms={newModelMtms} filterOptions={availableFilterOptions.orders} onDataUpdate={() => { handleGlobalRefresh(); setSelectedOrder(null); }} onPsrefLookup={handlePsrefLookup} />
+            <OrderDetailsModal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} order={selectedOrder} newModelMtms={newModelMtms} filterOptions={orderFilterOptions} onDataUpdate={() => { handleGlobalRefresh(); setSelectedOrder(null); }} onPsrefLookup={handlePsrefLookup} />
+            <TrackingSidebar isOpen={trackingSidebarState.isOpen} onClose={() => setTrackingSidebarState({ isOpen: false, shipmentNumber: null })} shipmentNumber={trackingSidebarState.shipmentNumber} />
             
             {!isLoading && !error && (
                 <>

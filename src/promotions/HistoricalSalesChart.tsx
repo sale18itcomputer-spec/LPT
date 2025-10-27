@@ -1,74 +1,80 @@
-import React from 'react';
-import ReactApexChart from 'react-apexcharts';
-import type { ApexOptions } from 'apexcharts';
+import React, { useContext, useMemo } from 'react';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
+import { ThemeContext } from '../../contexts/ThemeContext';
 
 interface HistoricalSalesChartProps {
     dailySales: { date: string; revenue: number }[];
 }
 
-const HistoricalSalesChart: React.FC<HistoricalSalesChartProps> = ({ dailySales }) => {
-    
-    const series = [{
-        name: 'Revenue',
-        data: dailySales.map(d => d.revenue)
-    }];
+const HistoricalSalesChart: React.FC<HistoricalSalesChartProps> = React.memo(({ dailySales }) => {
+    const themeContext = useContext(ThemeContext);
+    const isDark = themeContext?.theme === 'dark';
 
-    const options: ApexOptions = {
-        chart: {
+    const options: EChartsOption = useMemo(() => ({
+        grid: {
+            left: 0,
+            right: 0,
+            top: 5,
+            bottom: 5,
+        },
+        xAxis: {
+            type: 'category',
+            data: dailySales.map(d => d.date),
+            show: false,
+        },
+        yAxis: {
+            type: 'value',
+            show: false,
+        },
+        series: [{
+            name: 'Revenue',
             type: 'bar',
-            height: '100%',
-            fontFamily: 'Inter, sans-serif',
-            toolbar: { show: false },
-            sparkline: { enabled: true }
-        },
-        plotOptions: {
-            bar: {
-                columnWidth: '80%',
-                borderRadius: 4,
-            }
-        },
-        colors: ['#A5B4FC'],
-        dataLabels: { enabled: false },
-        xaxis: {
-            categories: dailySales.map(d => d.date),
-            labels: { show: false },
-            axisBorder: { show: false },
-            axisTicks: { show: false },
-        },
-        yaxis: { show: false },
-        grid: { show: false },
+            data: dailySales.map(d => d.revenue),
+            itemStyle: {
+                borderRadius: [2, 2, 0, 0],
+            },
+            barWidth: '80%',
+        }],
+        color: [isDark ? '#818CF8' : '#A5B4FC'],
         tooltip: {
-            enabled: true,
-            custom: function({ series, seriesIndex, dataPointIndex }) {
-                const saleData = dailySales[dataPointIndex];
+            trigger: 'axis',
+            axisPointer: {
+                type: 'shadow'
+            },
+            backgroundColor: isDark ? 'rgba(39, 39, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: isDark ? '#3f3f46' : '#e4e4e7',
+            textStyle: {
+                color: isDark ? '#f9fafb' : '#18181b',
+                fontFamily: 'Inter, sans-serif'
+            },
+            formatter: (params: any) => {
+                if (!params || params.length === 0) return '';
+                const dataIndex = params[0].dataIndex;
+                const saleData = dailySales[dataIndex];
                 if (!saleData) return '';
+                
                 const date = new Date(saleData.date);
                 const dateString = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
                 const revenueString = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(saleData.revenue);
-    
-                return `
-                    <div class="px-2 py-1 bg-secondary-bg text-primary-text font-sans text-sm border border-border-color shadow-md rounded-md">
-                        <div><strong>${dateString}:</strong> ${revenueString}</div>
-                    </div>
-                `;
+                
+                return `<div class="p-1"><strong>${dateString}:</strong> ${revenueString}</div>`;
             }
         },
-        states: {
-            hover: {
-                filter: { type: 'lighten', value: 0.1 } as any
-            }
-        }
-    };
+    }), [dailySales, isDark]);
 
     return (
-        <ReactApexChart 
-            options={options} 
-            series={series} 
-            type="bar" 
-            height="100%" 
-            width="100%" 
-        />
+        <div aria-label="Historical daily sales chart" role="figure" tabIndex={0}>
+            <ReactECharts 
+                option={options} 
+                style={{ height: '100%', width: '100%' }}
+                notMerge={true}
+                lazyUpdate={true}
+            />
+        </div>
     );
-};
+});
+
+HistoricalSalesChart.displayName = 'HistoricalSalesChart';
 
 export default HistoricalSalesChart;

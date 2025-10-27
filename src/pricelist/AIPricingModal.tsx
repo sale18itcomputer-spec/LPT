@@ -2,10 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// @google/genai-sdk fix: Updated import from "@google/ai" to "@google/genai" to use the correct library.
 import { GoogleGenAI } from "@google/genai";
 import ModalPanel from '../ui/ModalPanel';
-// FIX: Replace ArrowRightIcon with ArrowLongRightIcon
 import { XMarkIcon, SparklesIcon, ExclamationTriangleIcon, ArrowLongRightIcon, LinkIcon } from '../ui/Icons';
 import type { AugmentedMtmGroup } from './PriceListPage';
 import Skeleton from '../ui/Skeleton';
@@ -75,7 +73,6 @@ const AIPricingModal: React.FC<AIPricingModalProps> = ({ isOpen, onClose, item, 
         try {
             if (!process.env.API_KEY) throw new Error("API key is not configured.");
             
-            // @google/genai-sdk fix: Use new GoogleGenAI class and initialization
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             
             const prompt = `
@@ -101,7 +98,6 @@ You are an expert pricing strategist for Lenovo's Cambodian domestic market. You
 5.  **Format Output:** Return your response as a **single, valid JSON object** with no other text, markdown, or formatting. The JSON object must have this exact structure: \`{"suggested_sdp": <number>, "suggested_srp": <number>, "reasoning": "<string>"}\`.
 `;
             
-            // @google/genai-sdk fix: Use new ai.models.generateContent API and specify Google Search tool
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: prompt,
@@ -119,7 +115,6 @@ You are an expert pricing strategist for Lenovo's Cambodian domestic market. You
                 throw new Error("AI did not return a valid JSON object in its response.");
             }
             
-            // @google/genai-sdk fix: Use new groundingMetadata structure
             const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
             if (groundingChunks) {
                 const fetchedSources: Source[] = groundingChunks

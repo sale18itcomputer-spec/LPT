@@ -11,10 +11,10 @@ export const calculateInventoryStatus = (allOrders: Order[], allSales: Sale[], a
     });
     
     // 2. Aggregate order data by MTM
-    const inventoryMap = new Map<string, { mtm: string; modelName: string; productLine: string; specification: string; arrivedQty: number; totalLandingValue: number; totalFobValue: number; shippedQty: number; lastArrivalDate?: string; }>();
+    const inventoryMap = new Map<string, { mtm: string; modelName: string; arrivedQty: number; totalLandingValue: number; totalFobValue: number; shippedQty: number; lastArrivalDate?: string; }>();
     allOrders.forEach(order => {
         if (!inventoryMap.has(order.mtm)) {
-            inventoryMap.set(order.mtm, { mtm: order.mtm, modelName: order.modelName, productLine: order.productLine, specification: order.specification, arrivedQty: 0, totalLandingValue: 0, totalFobValue: 0, shippedQty: 0 });
+            inventoryMap.set(order.mtm, { mtm: order.mtm, modelName: order.modelName, arrivedQty: 0, totalLandingValue: 0, totalFobValue: 0, shippedQty: 0 });
         }
         const item = inventoryMap.get(order.mtm)!;
         item.shippedQty += order.qty;
@@ -170,7 +170,6 @@ export const analyzeBackorderCandidates = (
         return {
             mtm: item.mtm,
             modelName: item.modelName,
-            productLine: item.productLine,
             priority,
             priorityScore,
             recentSalesUnits: total90,
@@ -196,15 +195,13 @@ export const analyzePromotionCandidates = (inventoryData: InventoryItem[]): Prom
 
     return candidates
         .map(item => {
-            const { onHandQty, otwQty, weeksOfInventory, daysSinceLastSale, onHandValue, otwValue, daysSinceLastArrival, specification } = item;
+            const { onHandQty, otwQty, weeksOfInventory, daysSinceLastSale, onHandValue, otwValue, daysSinceLastArrival } = item;
             
             // 1. Check for Pre-Launch special case
             if (onHandQty <= 5 && otwQty > 20 && otwValue > 10000) {
                 const preLaunchCandidate: PromotionCandidate = {
                     mtm: item.mtm,
                     modelName: item.modelName,
-                    productLine: item.productLine,
-                    specification,
                     inStockQty: item.onHandQty,
                     otwQty: item.otwQty,
                     inStockValue: item.onHandValue,
@@ -287,8 +284,6 @@ export const analyzePromotionCandidates = (inventoryData: InventoryItem[]): Prom
             const regularCandidate: PromotionCandidate = {
                 mtm: item.mtm,
                 modelName: item.modelName,
-                productLine: item.productLine,
-                specification,
                 inStockQty: item.onHandQty,
                 otwQty: item.otwQty,
                 inStockValue: item.onHandValue,

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import type { LocalFiltersState, PromotionCandidate } from '../../types';
 import Select from '../ui/Select';
 import { useData } from '../../contexts/DataContext';
@@ -19,16 +19,12 @@ const priorityOptions: { label: string; value: 'all' | PromotionCandidate['prior
 ];
 
 const PromotionsFilters: React.FC<PromotionsFiltersProps> = ({ localFilters, setLocalFilters }) => {
-  const { promotionCandidates } = useData();
-
-  const handleFilterChange = <K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
-    setLocalFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const productLineOptions = useMemo(() => {
-    return [...new Set(promotionCandidates.map(c => c.productLine))].sort();
-  }, [promotionCandidates]);
-
+  const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
+    setLocalFilters(prev => {
+        if (prev[key] === value) return prev;
+        return { ...prev, [key]: value };
+    });
+  }, [setLocalFilters]);
 
   return (
     <>
@@ -65,14 +61,6 @@ const PromotionsFilters: React.FC<PromotionsFiltersProps> = ({ localFilters, set
                 );
             })}
         </div>
-      </div>
-       <div>
-        <Select
-          label="Product Line"
-          value={localFilters.promotionsProductLine}
-          onChange={(v) => handleFilterChange('promotionsProductLine', v)}
-          options={productLineOptions}
-        />
       </div>
     </>
   );

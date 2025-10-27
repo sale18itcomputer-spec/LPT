@@ -6,9 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Card from './ui/Card';
 import { 
     LinkIcon, ExclamationTriangleIcon, SparklesIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon,
-    // FIX: Add missing NewspaperIcon import
     NewspaperIcon, ChatBubbleLeftRightIcon, BuildingStorefrontIcon, CpuChipIcon, ScaleIcon,
-    // FIX: Add missing LightBulbIcon and GlobeAltIcon imports
     LightBulbIcon, GlobeAltIcon, UserGroupIcon, DocumentTextIcon
 } from './ui/Icons';
 import Skeleton from './ui/Skeleton';
@@ -139,7 +137,6 @@ const MarketIntelligence: React.FC = () => {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const prompt = getPrompt(activeTab, query);
             
-            // @google/genai-sdk fix: Use new ai.models.generateContentStream API and specify Google Search tool
             const streamResult = await ai.models.generateContentStream({
                 model: 'gemini-2.5-flash',
                 contents: prompt,
@@ -150,11 +147,9 @@ const MarketIntelligence: React.FC = () => {
             let collectedGroundingChunks: any[] = [];
             
             for await (const chunk of streamResult) {
-                // @google/genai-sdk fix: Access text output correctly from the response object.
                 fullText += chunk.text;
                 setBriefingText(fullText);
 
-                // @google/genai-sdk fix: Use new groundingMetadata structure
                 if (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks) {
                     collectedGroundingChunks.push(...chunk.candidates[0].groundingMetadata.groundingChunks);
                 }
@@ -266,13 +261,12 @@ const MarketIntelligence: React.FC = () => {
                             <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
                                 <div>
                                     <BriefingDisplay briefingText={briefingText} />
-                                    {isLoading && briefingText && <span className="inline-block w-2 h-5 bg-highlight pulse-block-cursor ml-1 align-bottom"></span>}
+                                    {isLoading && <p>Loading...</p>}
                                 </div>
-                                
-                                {!isLoading && sources.length > 0 && (
+                                 {sources.length > 0 && (
                                     <div>
                                         <h4 className="font-semibold text-primary-text mb-2">Sources</h4>
-                                        <ul className="space-y-2">
+                                        <ul className="space-y-2 text-sm">
                                             {sources.map((source, index) => (
                                                 <motion.li 
                                                     key={index}
@@ -280,9 +274,15 @@ const MarketIntelligence: React.FC = () => {
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ delay: index * 0.1 }}
                                                 >
-                                                    <a href={source.uri} target="_blank" rel="noopener noreferrer" className="block p-2 rounded-md bg-slate-50 dark:bg-dark-secondary-bg/50 hover:bg-slate-100 dark:hover:bg-dark-secondary-bg group transition-colors" title={source.title}>
-                                                        <p className="font-semibold text-highlight group-hover:underline truncate text-sm">{source.title}</p>
-                                                        <p className="text-xs text-secondary-text truncate">{source.uri}</p>
+                                                    <a 
+                                                        href={source.uri} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer" 
+                                                        className="flex items-center p-2 rounded-md bg-slate-100 dark:bg-dark-secondary-bg/50 hover:bg-slate-200 dark:hover:bg-dark-secondary-bg group transition-colors"
+                                                        title={source.title}
+                                                    >
+                                                        <LinkIcon className="h-4 w-4 mr-2 flex-shrink-0 text-secondary-text" />
+                                                        <span className="truncate text-highlight group-hover:underline">{source.title}</span>
                                                     </a>
                                                 </motion.li>
                                             ))}
@@ -290,7 +290,8 @@ const MarketIntelligence: React.FC = () => {
                                     </div>
                                 )}
                             </motion.div>
-                         ) : <InitialState key="initial" />}
+                         ) : <InitialState key="initial" />
+                        }
                     </AnimatePresence>
                 </div>
             </div>

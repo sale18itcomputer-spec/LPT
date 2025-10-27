@@ -5,7 +5,6 @@
  * @returns The CSV-safe string.
  */
 const escapeCsvValue = (value: any): string => {
-    // FIX: Explicitly handle number types to prevent them from being treated as objects.
     if (typeof value === 'number') {
         return String(value);
     }

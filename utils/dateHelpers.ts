@@ -1,4 +1,4 @@
-
+import type { OrderDateRangePreset } from '../types';
 
 /**
  * Gets the ISO week of the year for a given date.
@@ -108,4 +108,74 @@ export const toYYYYMMDD = (d: Date) => {
     const month = String(d.getUTCMonth() + 1).padStart(2, '0');
     const day = String(d.getUTCDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+};
+
+export const calculateDatesForPreset = (preset: 'last30' | 'last90' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'thisYear' | 'all' | 'custom'): { startDate: string | null, endDate: string | null } => {
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth();
+    const d = now.getUTCDate();
+
+    let startDate: Date;
+    let endDate: Date = new Date(Date.UTC(y, m, d));
+
+    if (preset === 'all' || preset === 'custom') {
+        return { startDate: null, endDate: null };
+    }
+
+    switch (preset) {
+        case 'last30':
+            startDate = new Date(Date.UTC(y, m, d));
+            startDate.setUTCDate(startDate.getUTCDate() - 29);
+            break;
+        case 'last90':
+            startDate = new Date(Date.UTC(y, m, d));
+            startDate.setUTCDate(startDate.getUTCDate() - 89);
+            break;
+        case 'thisMonth':
+            startDate = new Date(Date.UTC(y, m, 1));
+            break;
+        case 'lastMonth':
+            startDate = new Date(Date.UTC(y, m - 1, 1));
+            endDate = new Date(Date.UTC(y, m, 0));
+            break;
+        case 'thisQuarter':
+            const q = Math.floor(m / 3);
+            startDate = new Date(Date.UTC(y, q * 3, 1));
+            break;
+        case 'lastQuarter':
+            const currentQuarter = Math.floor(m / 3);
+            const lastQuarterYear = currentQuarter === 0 ? y - 1 : y;
+            const lastQuarterStartMonth = currentQuarter === 0 ? 9 : (currentQuarter - 1) * 3;
+            startDate = new Date(Date.UTC(lastQuarterYear, lastQuarterStartMonth, 1));
+            endDate = new Date(Date.UTC(lastQuarterYear, lastQuarterStartMonth + 3, 0));
+            break;
+        case 'thisYear':
+        default:
+            startDate = new Date(Date.UTC(y, 0, 1));
+            break;
+    }
+
+    return {
+        startDate: toYYYYMMDD(startDate),
+        endDate: toYYYYMMDD(endDate),
+    };
+};
+
+export const calculateDatesForYearQuarter = (year: string, quarter: string): { startDate: string | null, endDate: string | null } => {
+    if (year === 'all') {
+        return { startDate: null, endDate: null };
+    }
+    const startYear = parseInt(year, 10);
+    if (quarter !== 'all') {
+        const qNum = parseInt(quarter.replace('Q', ''));
+        const startMonth = (qNum - 1) * 3;
+        const startDate = new Date(Date.UTC(startYear, startMonth, 1));
+        const endDate = new Date(Date.UTC(startYear, startMonth + 3, 0));
+        return { startDate: toYYYYMMDD(startDate), endDate: toYYYYMMDD(endDate) };
+    } else { // just year
+        const startDate = new Date(Date.UTC(startYear, 0, 1));
+        const endDate = new Date(Date.UTC(startYear, 11, 31));
+        return { startDate: toYYYYMMDD(startDate), endDate: toYYYYMMDD(endDate) };
+    }
 };

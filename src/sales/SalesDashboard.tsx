@@ -1,9 +1,13 @@
 
-import React, { useMemo, useState, useCallback } from 'react';
-import { motion, type Variants } from 'framer-motion';
+
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { motion, type Variants, AnimatePresence, useInView } from 'framer-motion';
+import { GoogleGenAI } from "@google/genai";
+
 import { useData } from '../../contexts/DataContext';
+import { useToast } from '../../contexts/ToastContext';
 import Card from '../ui/Card';
-import RevenueByQuarterChart from './charts/RevenueByQuarterChart';
+import RevenueTrendChart from './charts/RevenueTrendChart';
 import TopBuyersChart from './charts/TopBuyersChart';
 import TopSellingModelsChart from './charts/TopSellingModelsChart';
 import SalesBySegmentChart from './charts/SalesBySegmentChart';
@@ -12,229 +16,298 @@ import type { DashboardType, SalesKpiData, ViewType, LocalFiltersState } from '.
 import SegmentedControl from '../ui/SegmentedControl';
 import SalesKpiCards from './SalesKpiCards';
 import ChartCard from '../ui/ChartCard';
+import { SparklesIcon, ChartBarIcon, MapPinIcon, ArrowUpIcon, FunnelIcon, XMarkIcon } from '../ui/Icons';
+import TopBuyersMap from './charts/TopBuyersMap';
+import SalesBreakdownByPeriod from './SalesBreakdownByPeriod';
+import { INITIAL_LOCAL_FILTERS } from '../../constants';
 
+// Props definition
 interface SalesDashboardProps {
   onNavigateAndFilter: (view: ViewType, filters: Partial<LocalFiltersState>) => void;
   localFilters: LocalFiltersState;
   setLocalFilters: React.Dispatch<React.SetStateAction<LocalFiltersState>>;
+  aiFilteredBuyers: string[] | null;
 }
 
+// Animation variants
+const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.05 } } };
+const itemVariants: Variants = { hidden: { y: 30, opacity: 0, scale: 0.97 }, visible: { y: 0, opacity: 1, scale: 1, transition: { duration: 0.6, ease: 'easeOut' } } };
+const headerVariants: Variants = { hidden: { y: -20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { duration: 0.7, ease: 'easeOut' } } };
+const filterBadgeVariants: Variants = { initial: { scale: 0, opacity: 0 }, animate: { scale: 1, opacity: 1, transition: { type: 'spring', stiffness: 500, damping: 30 } }, exit: { scale: 0, opacity: 0, transition: { duration: 0.2 } } };
+
+// Type definitions for component state
 type TopModelsSortBy = 'revenue' | 'units';
+type TopBuyersSortBy = 'revenue' | 'units';
+type ChartView = 'chart' | 'map';
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-    },
-  },
-};
+const SalesDashboard: React.FC<SalesDashboardProps> = ({ onNavigateAndFilter, localFilters, setLocalFilters, aiFilteredBuyers }) => {
+    // Hooks
+    const { allSales, reconciledSales, profitabilityKpiData } = useData();
+    const { showToast } = useToast();
+    const mainContentRef = useRef<HTMLDivElement>(null);
+    const kpiRef = useRef<HTMLDivElement>(null);
+    const isKpiInView = useInView(kpiRef, { once: true, margin: "-100px" });
 
-const itemVariants: Variants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: { duration: 0.5, ease: 'easeOut' as const },
-  },
-};
-
-
-const SalesDashboard: React.FC<SalesDashboardProps> = ({ onNavigateAndFilter, localFilters, setLocalFilters }) => {
-    const { allSales, reconciledSales } = useData();
+    // Component State
     const [topModelsSortBy, setTopModelsSortBy] = useState<TopModelsSortBy>('revenue');
-    const [timeSeriesGranularity, setTimeSeriesGranularity] = useState<'monthly' | 'quarterly'>('monthly');
-    // FIX: Define a constant for the number of items to show in top performer charts.
-    const TOP_PERFORMERS_COUNT = 8;
+    const [topBuyersSortBy, setTopBuyersSortBy] = useState<TopBuyersSortBy>('revenue');
+    const [chartView, setChartView] = useState<ChartView>('chart');
+    const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
+    const [selectedBuyer, setSelectedBuyer] = useState<string | null>(null);
+    const [selectedModel, setSelectedModel] = useState<string | null>(null);
+    const [analysis, setAnalysis] = useState<string | null>(null);
+    const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+    const [showScrollTop, setShowScrollTop] = useState(false);
+    
+    // Effects
+    useEffect(() => {
+        const handleScroll = () => setShowScrollTop(window.scrollY > 400);
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
+    const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Data Processing & Memos
     const locallyFilteredSales = useMemo(() => {
-        const {
-            salesSearchTerm,
-            salesProductLine,
-            salesSegment,
-            salesBuyer,
-            salesStartDate,
-            salesEndDate
-        } = localFilters;
-
-        let tempSales = allSales;
+        const { salesSearchTerm, salesSegment, salesBuyer, salesStartDate, salesEndDate, salesRevenueMin, salesRevenueMax } = localFilters;
         
-        if (salesStartDate || salesEndDate) {
-            const start = salesStartDate ? new Date(salesStartDate).getTime() : -Infinity;
-            const end = salesEndDate ? new Date(salesEndDate).getTime() + 86400000 - 1 : Infinity; // inclusive
-            tempSales = tempSales.filter(s => {
-                if (!s.invoiceDate) return false;
-                const saleDate = new Date(s.invoiceDate).getTime();
-                return saleDate >= start && saleDate <= end;
-            });
+        let salesToFilter = [...allSales];
+
+        if (aiFilteredBuyers !== null) {
+            const buyerSet = new Set(aiFilteredBuyers);
+            salesToFilter = salesToFilter.filter(s => buyerSet.has(s.buyerName));
+        } else if (salesBuyer.length > 0) {
+            const buyerSet = new Set(salesBuyer);
+            salesToFilter = salesToFilter.filter(s => buyerSet.has(s.buyerName));
         }
 
-        return tempSales.filter(sale => {
-            if (salesProductLine.length > 0 && !salesProductLine.includes(sale.productLine)) return false;
+        return salesToFilter.filter(sale => {
             if (salesSegment.length > 0 && !salesSegment.includes(sale.segment)) return false;
-            if (salesBuyer.length > 0 && !salesBuyer.includes(sale.buyerName)) return false;
+            
+            if (salesStartDate || salesEndDate) {
+                const start = salesStartDate ? new Date(salesStartDate).getTime() : -Infinity;
+                const end = salesEndDate ? new Date(salesEndDate).getTime() + 86400000 - 1 : Infinity;
+                const saleDate = sale.invoiceDate ? new Date(sale.invoiceDate).getTime() : null;
+                if (!saleDate || saleDate < start || saleDate > end) return false;
+            }
+            
+            if (salesRevenueMin !== null && sale.totalRevenue < salesRevenueMin) return false;
+            if (salesRevenueMax !== null && sale.totalRevenue > salesRevenueMax) return false;
             
             if (salesSearchTerm) {
-                const lower = salesSearchTerm.toLowerCase();
-                return sale.invoiceNumber.toLowerCase().includes(lower) ||
-                       sale.lenovoProductNumber.toLowerCase().includes(lower) ||
-                       sale.modelName.toLowerCase().includes(lower) ||
-                       sale.buyerName.toLowerCase().includes(lower) ||
-                       sale.serialNumber.toLowerCase().includes(lower);
+                const lowercasedTerm = salesSearchTerm.toLowerCase();
+                return sale.invoiceNumber.toLowerCase().includes(lowercasedTerm) ||
+                       sale.lenovoProductNumber.toLowerCase().includes(lowercasedTerm) ||
+                       sale.buyerName.toLowerCase().includes(lowercasedTerm) ||
+                       sale.serialNumber.toLowerCase().includes(lowercasedTerm);
             }
+            
             return true;
         });
-    }, [allSales, localFilters]);
+    }, [allSales, localFilters, aiFilteredBuyers]);
 
+    const { kpiData, profitByMtm } = useMemo(() => {
+        if (locallyFilteredSales.length === 0) return { kpiData: null, profitByMtm: new Map() };
 
-    const salesKpiData = useMemo((): SalesKpiData | undefined => {
-        if (locallyFilteredSales.length === 0) return undefined;
+        const serialsInFilter = new Set(locallyFilteredSales.map(s => s.serialNumber));
+        const relevantReconciled = reconciledSales.filter(rs => serialsInFilter.has(rs.serialNumber));
+        
+        const mtmProfitMap = new Map<string, { totalProfit: number; totalRevenue: number }>();
+
+        const { totalRevenue, totalUnits, totalProfit } = relevantReconciled.reduce((acc, sale) => {
+            acc.totalRevenue += sale.unitSalePrice;
+            acc.totalUnits += 1; // Each reconciled sale is one unit
+            
+            if (sale.unitProfit !== null) {
+                 acc.totalProfit += sale.unitProfit;
+                 const mtm = sale.mtm;
+                 const current = mtmProfitMap.get(mtm) || { totalProfit: 0, totalRevenue: 0 };
+                 current.totalProfit += sale.unitProfit;
+                 current.totalRevenue += sale.unitSalePrice;
+                 mtmProfitMap.set(mtm, current);
+            }
+            return acc;
+        }, { totalRevenue: 0, totalUnits: 0, totalProfit: 0 });
 
         const uniqueInvoices = new Set(locallyFilteredSales.map(s => s.invoiceNumber));
-        const filteredSaleSerials = new Set(locallyFilteredSales.map(s => s.serialNumber));
 
-        const kpi = locallyFilteredSales.reduce((acc, sale) => {
-            acc.totalRevenue += sale.totalRevenue;
-            acc.totalUnits += sale.quantity;
-            return acc;
-        }, { totalRevenue: 0, totalUnits: 0, invoiceCount: 0, averageSalePricePerUnit: 0, averageRevenuePerInvoice: 0, uniqueBuyersCount: 0, averageGrossMargin: 0, totalProfit: 0 });
-
-        kpi.invoiceCount = uniqueInvoices.size;
-        kpi.averageSalePricePerUnit = kpi.totalUnits > 0 ? kpi.totalRevenue / kpi.totalUnits : 0;
-        kpi.averageRevenuePerInvoice = kpi.invoiceCount > 0 ? kpi.totalRevenue / kpi.invoiceCount : 0;
-        kpi.uniqueBuyersCount = new Set(locallyFilteredSales.map(s => s.buyerId)).size;
-
-        const filteredReconciled = reconciledSales.filter(rs => filteredSaleSerials.has(rs.serialNumber));
-        const totalProfit = filteredReconciled.reduce((sum, sale) => sum + (sale.unitProfit || 0), 0);
-        kpi.totalProfit = totalProfit;
-        kpi.averageGrossMargin = kpi.totalRevenue > 0 ? (totalProfit / kpi.totalRevenue) * 100 : 0;
-
-        return kpi;
+        return {
+            kpiData: {
+                totalRevenue,
+                totalUnits,
+                invoiceCount: uniqueInvoices.size,
+                averageSalePricePerUnit: totalUnits > 0 ? totalRevenue / totalUnits : 0,
+                averageRevenuePerInvoice: uniqueInvoices.size > 0 ? totalRevenue / uniqueInvoices.size : 0,
+                uniqueBuyersCount: new Set(locallyFilteredSales.map(s => s.buyerId)).size,
+                totalProfit,
+                averageGrossMargin: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0,
+            },
+            profitByMtm: mtmProfitMap
+        };
     }, [locallyFilteredSales, reconciledSales]);
+
+    const trendData = useMemo(() => {
+        const aggregated = locallyFilteredSales.reduce((acc, sale) => {
+            if (!sale.invoiceDate) return acc;
+            const date = new Date(sale.invoiceDate);
+            const year = date.getUTCFullYear();
+            const month = date.getUTCMonth();
+            const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+            const label = `${date.toLocaleString('en-US', { timeZone: 'UTC', month: 'short' })} '${String(year).slice(2)}`;
+            if (!acc[key]) acc[key] = { sortKey: key, label, value: 0 };
+            acc[key].value += sale.totalRevenue;
+            return acc;
+        }, {} as Record<string, { sortKey: string, label: string, value: number }>);
+        return Object.values(aggregated).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+    }, [locallyFilteredSales]);
+
+    const topBuyersData = useMemo(() => {
+        const aggregated = locallyFilteredSales.reduce((acc, sale) => {
+            if (sale.buyerName === 'N/A') return acc;
+            if (!acc[sale.buyerName]) acc[sale.buyerName] = { revenue: 0, units: 0 };
+            acc[sale.buyerName].revenue += sale.totalRevenue;
+            acc[sale.buyerName].units += sale.quantity;
+            return acc;
+        }, {} as Record<string, { revenue: number, units: number }>);
+        return Object.entries(aggregated).map(([name, { revenue, units }]) => ({
+            name, value: topBuyersSortBy === 'revenue' ? revenue : units, revenue, units
+        })).sort((a, b) => b.value - a.value);
+    }, [locallyFilteredSales, topBuyersSortBy]);
+
+    const topModelsData = useMemo(() => {
+        const aggregated = locallyFilteredSales.reduce((acc, sale) => {
+            if (sale.lenovoProductNumber === 'N/A') return acc;
+            if (!acc[sale.lenovoProductNumber]) acc[sale.lenovoProductNumber] = { revenue: 0, units: 0, modelName: sale.modelName };
+            acc[sale.lenovoProductNumber].revenue += sale.totalRevenue;
+            acc[sale.lenovoProductNumber].units += sale.quantity;
+            return acc;
+        }, {} as Record<string, { revenue: number; units: number; modelName: string; }>);
+        return Object.entries(aggregated).map(([name, { revenue, units, modelName }]) => ({ name, value: topModelsSortBy === 'revenue' ? revenue : units, revenue, units, modelName })).sort((a, b) => b.value - a.value);
+    }, [locallyFilteredSales, topModelsSortBy]);
+
+    const handleGenerateAnalysis = useCallback(async () => {
+        setIsLoadingAnalysis(true);
+        setAnalysis(null);
+        try {
+            if (!process.env.API_KEY) throw new Error("API key is not configured.");
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const prompt = `Analyze this sales data trend: ${JSON.stringify(trendData)}. Provide a one-sentence, sharp insight about the trend. For example: "Strong Q4 growth was driven by seasonal demand, but a slight dip in January suggests a need for post-holiday promotions."`;
+            const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+            setAnalysis(response.text);
+        } catch (err) {
+            showToast(err instanceof Error ? `AI analysis failed: ${err.message}` : 'An AI analysis error occurred.', 'error');
+        } finally {
+            setIsLoadingAnalysis(false);
+        }
+    }, [trendData, showToast]);
     
-    const handleNavigate = (target: DashboardType, searchTerm: string) => {
-        onNavigateAndFilter(target, { [target === 'orders' ? 'orderSearchTerm' : 'salesSearchTerm']: searchTerm });
-    };
+    const activeFiltersCount = useMemo(() => {
+        let count = 0;
+        if (localFilters.salesSearchTerm) count++;
+        if (localFilters.salesSegment.length > 0) count++;
+        if (localFilters.salesBuyer.length > 0 || aiFilteredBuyers?.length) count++;
+        if (localFilters.salesDateRangePreset !== 'thisYear' && localFilters.salesDateRangePreset !== 'all') count++;
+        if (localFilters.salesRevenueMin !== null || localFilters.salesRevenueMax !== null) count++;
+        if (localFilters.salesBuyerRegion) count++;
+        return count;
+    }, [localFilters, aiFilteredBuyers]);
 
-    // FIX: Added handler for segment selection to filter data.
-    const handleSegmentSelect = useCallback((segment: string) => {
-        const isAlreadySelected = localFilters.salesSegment.length === 1 && localFilters.salesSegment[0] === segment;
+    const clearAllFilters = useCallback(() => {
         setLocalFilters(prev => ({
             ...prev,
-            salesSegment: isAlreadySelected ? [] : [segment],
+            salesSearchTerm: '',
+            salesSegment: [],
+            salesBuyer: [],
+            salesDateRangePreset: 'thisYear',
+            salesYear: 'all',
+            salesQuarter: 'all',
+            salesStartDate: INITIAL_LOCAL_FILTERS.salesStartDate,
+            salesEndDate: INITIAL_LOCAL_FILTERS.salesEndDate,
+            salesRevenueMin: null,
+            salesRevenueMax: null,
+            salesBuyerRegion: '',
         }));
-    }, [localFilters.salesSegment, setLocalFilters]);
+        showToast('All sales filters cleared', 'success');
+    }, [setLocalFilters, showToast]);
 
-    // FIX: Added handler for buyer selection to filter data.
-    const handleBuyerSelect = useCallback((buyer: string) => {
-        const isAlreadySelected = localFilters.salesBuyer.length === 1 && localFilters.salesBuyer[0] === buyer;
-        setLocalFilters(prev => ({
-            ...prev,
-            salesBuyer: isAlreadySelected ? [] : [buyer],
-        }));
-    }, [localFilters.salesBuyer, setLocalFilters]);
-
-    // FIX: Added handler for model selection to filter data.
-    const handleModelSelect = useCallback((mtm: string) => {
-        const isAlreadySelected = localFilters.salesSearchTerm === mtm;
-         setLocalFilters(prev => ({
-            ...prev,
-            salesSearchTerm: isAlreadySelected ? '' : mtm,
-        }));
-    }, [localFilters.salesSearchTerm, setLocalFilters]);
+    const handleSegmentSelect = useCallback((segment: string | null) => {
+        setSelectedSegment(segment);
+        onNavigateAndFilter('promotions', { promotionsSegment: segment });
+    }, [onNavigateAndFilter]);
 
     return (
-        <main className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6">
-            <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0 }}>
-                <h1 className="text-3xl font-bold tracking-tight text-primary-text dark:text-dark-primary-text">Sales Analytics</h1>
-                <p className="text-secondary-text dark:text-dark-secondary-text mt-1">Deep dive into sales performance, revenue trends, and top performers.</p>
+        <main ref={mainContentRef} className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 space-y-8">
+            <motion.div variants={headerVariants} initial="hidden" animate="visible" className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-cyan-600 to-emerald-600 dark:from-blue-700 dark:via-cyan-700 dark:to-emerald-700 p-8 shadow-xl">
+                <div className="relative z-10">
+                    <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Sales Analytics</h1>
+                    <p className="text-cyan-100 text-lg mb-4">Analyze revenue, top products, and key customer segments.</p>
+                    {activeFiltersCount > 0 && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 flex-wrap">
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/25 backdrop-blur-sm border border-white/40"><FunnelIcon className="h-4 w-4 text-white" /><span className="text-sm font-semibold text-white">{activeFiltersCount} Active Filter(s)</span></div>
+                            <AnimatePresence mode="popLayout">{localFilters.salesSegment.length > 0 && (<motion.button key="segment-filter" variants={filterBadgeVariants} initial="initial" animate="animate" exit="exit" onClick={() => setLocalFilters(p => ({...p, salesSegment: []}))} className="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 hover:bg-white text-cyan-700 text-sm font-medium transition-colors"><span>Segment: {localFilters.salesSegment[0]}</span><XMarkIcon className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" /></motion.button>)}</AnimatePresence>
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={clearAllFilters} className="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 border border-white/40 text-white text-sm font-medium transition-colors">Clear All</motion.button>
+                        </motion.div>
+                    )}
+                </div>
             </motion.div>
 
-            {salesKpiData && (
-                <motion.div initial="hidden" animate="visible" variants={containerVariants}>
-                    <SalesKpiCards kpiData={salesKpiData} />
-                </motion.div>
-            )}
+            <motion.div ref={kpiRef} initial="hidden" animate={isKpiInView ? "visible" : "hidden"} variants={containerVariants}>
+                {kpiData && <SalesKpiCards kpiData={kpiData} />}
+            </motion.div>
 
-             <motion.div 
-                className="grid grid-cols-1 xl:grid-cols-5 gap-6"
-                initial="hidden" animate="visible" variants={containerVariants}
-            >
-                <motion.div className="xl:col-span-3" variants={itemVariants}>
-                    {/* FIX: Pass granularity prop to RevenueByQuarterChart and add controls to change it. */}
-                    <ChartCard
-                        title="Revenue Trend"
-                        description={`${timeSeriesGranularity === 'monthly' ? 'Monthly' : 'Quarterly'} value of invoiced sales for the selected period.`}
-                        controls={
-                            <SegmentedControl
-                                value={timeSeriesGranularity}
-                                onChange={(val) => setTimeSeriesGranularity(val as 'monthly' | 'quarterly')}
-                                options={[{ label: 'Monthly', value: 'monthly' }, { label: 'Quarterly', value: 'quarterly' }]}
-                                label="Time series granularity"
-                            />
-                        }
-                        className="h-[400px]"
-                    >
-                        <RevenueByQuarterChart data={locallyFilteredSales} granularity={timeSeriesGranularity} />
+            <motion.div initial="hidden" animate="visible" variants={containerVariants}>
+                <ChartCard
+                    title="Revenue Trend"
+                    description={`Revenue by invoice date (${locallyFilteredSales.length.toLocaleString()} line items)`}
+                    controls={<button onClick={handleGenerateAnalysis} disabled={isLoadingAnalysis} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-highlight-hover text-highlight hover:bg-indigo-200"><SparklesIcon className="h-4 w-4" />{isLoadingAnalysis ? 'Analyzing...' : 'AI Analysis'}</button>}
+                    className="h-[550px]"
+                >
+                    <RevenueTrendChart trendData={trendData} granularity="monthly" analysis={analysis} isLoadingAnalysis={isLoadingAnalysis} onClearAnalysis={() => setAnalysis(null)} onPeriodSelect={()=>{}} />
+                </ChartCard>
+            </motion.div>
+
+            <motion.div initial="hidden" animate="visible" variants={containerVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <motion.div variants={itemVariants}>
+                    <ChartCard title="Sales by Segment" description="Revenue distribution across customer segments. Click to see promotions." className="h-[400px]">
+                        <SalesBySegmentChart data={locallyFilteredSales} onSegmentSelect={handleSegmentSelect} selectedSegment={localFilters.promotionsSegment} itemCount={10} />
                     </ChartCard>
                 </motion.div>
-                 <motion.div className="xl:col-span-2" variants={itemVariants}>
-                    <Card title="Revenue by Segment" description="Breakdown of total sales revenue by customer segment. Click a segment to filter.">
-                        {/* FIX: Passed onSegmentSelect and selectedSegment props to SalesBySegmentChart */}
-                        <SalesBySegmentChart 
-                            data={locallyFilteredSales} 
-                            onSegmentSelect={handleSegmentSelect}
-                            selectedSegment={localFilters.salesSegment.length === 1 ? localFilters.salesSegment[0] : null}
-                            itemCount={TOP_PERFORMERS_COUNT}
-                        />
-                    </Card>
+                <motion.div variants={itemVariants}>
+                    <SalesBreakdownByPeriod sales={locallyFilteredSales} />
                 </motion.div>
             </motion.div>
 
-            <motion.div 
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-                initial="hidden" animate="visible" variants={containerVariants}
-            >
+            <motion.div initial="hidden" animate="visible" variants={containerVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <motion.div variants={itemVariants}>
-                    <Card 
-                        title="Top Selling Models" 
-                        description={`by total ${topModelsSortBy}. Click a model to filter.`}
-                        controls={
-                            <SegmentedControl
-                                value={topModelsSortBy}
-                                onChange={(val) => setTopModelsSortBy(val as TopModelsSortBy)}
-                                options={[{ label: 'Revenue', value: 'revenue' }, { label: 'Units', value: 'units' }]}
-                                label="Sort top models"
-                            />
-                        }
+                    <ChartCard
+                        title="Top Buyers"
+                        description="Customers ranked by selected metric."
+                        controls={<SegmentedControl value={chartView} onChange={(v) => setChartView(v as ChartView)} options={[{ label: 'Chart', value: 'chart', icon: ChartBarIcon }, { label: 'Map', value: 'map', icon: MapPinIcon }]} label="View type" />}
                     >
-                        {/* FIX: Passed onModelSelect and selectedModel props to TopSellingModelsChart */}
-                        <TopSellingModelsChart 
-                            data={locallyFilteredSales} 
-                            sortBy={topModelsSortBy} 
-                            onModelSelect={handleModelSelect}
-                            selectedModel={localFilters.salesSearchTerm}
-                            itemCount={TOP_PERFORMERS_COUNT}
-                        />
-                    </Card>
+                         <AnimatePresence mode="wait">
+                            <motion.div key={chartView} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                                {chartView === 'chart' ? (
+                                    <TopBuyersChart data={topBuyersData} sortBy={topBuyersSortBy} onBuyerSelect={setSelectedBuyer} selectedBuyer={selectedBuyer} itemCount={10}/>
+                                ) : (
+                                    <TopBuyersMap salesData={topBuyersData} locations={{}} isLoading={false} onBuyerSelect={setSelectedBuyer} selectedBuyer={selectedBuyer} />
+                                )}
+                            </motion.div>
+                         </AnimatePresence>
+                    </ChartCard>
                 </motion.div>
                 <motion.div variants={itemVariants}>
-                     <Card title="Top Buyers" description="by total revenue. Click a buyer to filter.">
-                        {/* FIX: Passed onBuyerSelect and selectedBuyer props to TopBuyersChart */}
-                        <TopBuyersChart 
-                            data={locallyFilteredSales} 
-                            onBuyerSelect={handleBuyerSelect}
-                            selectedBuyer={localFilters.salesBuyer.length === 1 ? localFilters.salesBuyer[0] : null}
-                            itemCount={TOP_PERFORMERS_COUNT}
-                        />
-                    </Card>
+                    <ChartCard title="Top Selling Models" description="Products ranked by selected metric.">
+                        <TopSellingModelsChart data={topModelsData} sortBy={topModelsSortBy} onModelSelect={setSelectedModel} selectedModel={selectedModel} itemCount={10} profitByMtm={profitByMtm} />
+                    </ChartCard>
                 </motion.div>
             </motion.div>
 
-            <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.5 }}>
-                <SalesTable sales={locallyFilteredSales} onNavigateAndFilter={handleNavigate} />
-            </motion.div>
+            <motion.div variants={itemVariants} initial="hidden" animate="visible"><SalesTable sales={locallyFilteredSales} /></motion.div>
+
+            <AnimatePresence>
+                {showScrollTop && (<motion.button initial={{ opacity: 0, scale: 0.8, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: 20 }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={scrollToTop} className="fixed bottom-8 right-8 z-50 p-4 rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 text-white shadow-2xl hover:shadow-blue-500/50" title="Scroll to top"><ArrowUpIcon className="h-6 w-6" /></motion.button>)}
+            </AnimatePresence>
         </main>
     );
 };

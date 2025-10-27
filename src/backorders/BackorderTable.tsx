@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { BackorderRecommendation, Sale } from '../../types';
@@ -88,8 +89,7 @@ const BackorderTable: React.FC<{ recommendations: BackorderRecommendation[], all
       const lowercasedFilter = searchTerm.toLowerCase();
       filteredData = filteredData.filter(item =>
         item.mtm.toLowerCase().includes(lowercasedFilter) ||
-        item.modelName.toLowerCase().includes(lowercasedFilter) ||
-        item.productLine.toLowerCase().includes(lowercasedFilter)
+        item.modelName.toLowerCase().includes(lowercasedFilter)
       );
     }
     
@@ -128,7 +128,7 @@ const BackorderTable: React.FC<{ recommendations: BackorderRecommendation[], all
         <h3 className="text-lg font-semibold text-primary-text">Prioritized Re-Order Candidates</h3>
         <input
             type="text"
-            placeholder="Search MTM, model, or product line..."
+            placeholder="Search MTM or model..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="block w-full sm:w-64 bg-secondary-bg border border-border-color rounded-md py-2 px-3 text-primary-text placeholder-secondary-text focus:outline-none focus:ring-2 focus:ring-highlight sm:text-sm"

@@ -1,7 +1,6 @@
-import React, { useMemo, useContext } from 'react';
-import ReactApexChart from 'react-apexcharts';
-import type { ApexOptions } from 'apexcharts';
-import Card from '../../ui/Card';
+import React, { useMemo, useContext, useRef, useEffect } from 'react';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
 import { DocumentMagnifyingGlassIcon } from '../../ui/Icons';
 import { ThemeContext } from '../../../contexts/ThemeContext';
 import type { Order, Sale } from '../../../types';
@@ -9,15 +8,24 @@ import type { Order, Sale } from '../../../types';
 interface ChartProps {
     orders: Order[];
     sales: Sale[];
+    onSelect: (status: 'Matched' | 'Unsold' | null) => void;
+    selected: 'Matched' | 'Unsold' | null;
 }
 
-const ReconciliationStatusChart: React.FC<ChartProps> = ({ orders, sales }) => {
+const ReconciliationStatusChart: React.FC<ChartProps> = React.memo(({ orders, sales, onSelect, selected }) => {
+    const chartRef = useRef<ReactECharts>(null);
     const themeContext = useContext(ThemeContext);
-    const { theme } = themeContext!;
-    const isDark = theme === 'dark';
+    const isDark = themeContext?.theme === 'dark';
 
     const labelColor = isDark ? '#d4d4d8' : '#4B5563';
     const primaryTextColor = isDark ? '#f9fafb' : '#1F2937';
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            chartRef.current?.getEchartsInstance().resize();
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
 
     const chartData = useMemo(() => {
         const orderQtyBySo = new Map<string, number>();
@@ -41,7 +49,7 @@ const ReconciliationStatusChart: React.FC<ChartProps> = ({ orders, sales }) => {
             const saleQty = saleQtyBySo.get(so) || 0;
             if (orderQty > saleQty) {
                 statusCounts.unsold++;
-            } else { // Matched or the "impossible" oversold
+            } else {
                 statusCounts.matched++;
             }
         });
@@ -57,45 +65,105 @@ const ReconciliationStatusChart: React.FC<ChartProps> = ({ orders, sales }) => {
     }
     
     const totalValue = chartData.reduce((sum, item) => sum + item.value, 0);
-    const series = chartData.map(d => d.value);
-    const labels = chartData.map(d => d.name);
 
-    const options: ApexOptions = {
-        chart: { type: 'donut', height: '100%', fontFamily: 'Inter, sans-serif' },
-        series, labels,
-        colors: ['#10B981', '#F97316'],
-        plotOptions: { pie: { donut: { size: '70%', labels: { show: true, total: { show: true, label: 'Total Orders', fontSize: '0.875rem', color: labelColor, formatter: () => totalValue.toLocaleString() }, value: { show: true, fontSize: '1.75rem', fontWeight: 'bold', color: primaryTextColor } } } } },
-        dataLabels: { enabled: false },
-        legend: { position: 'bottom', fontFamily: 'Inter, sans-serif', fontWeight: 500, itemMargin: { horizontal: 5, vertical: 5 }, labels: { colors: labelColor } },
+    const options: EChartsOption = useMemo(() => ({
         tooltip: {
-            theme: isDark ? 'dark' : 'light',
-            custom: function({ seriesIndex, w }) {
-                const status = w.globals.labels[seriesIndex];
-                const value = w.globals.series[seriesIndex];
+            trigger: 'item',
+            backgroundColor: isDark ? 'rgba(39, 39, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: isDark ? '#3f3f46' : '#e4e4e7',
+            textStyle: { color: isDark ? '#f9fafb' : '#18181b' },
+            formatter: (params: any) => {
+                const { name, value, percent } = params;
                 let explanation = '';
-                switch(status) {
+                switch(name) {
                     case 'Matched':
-                        explanation = 'Total units sold match total units ordered for these Sales Orders.';
+                        explanation = 'Total units sold match or exceed total units ordered for these Sales Orders.';
                         break;
                     case 'Unsold':
                         explanation = 'Fewer units sold than ordered. Order may be partially fulfilled or sales data is pending.';
                         break;
                 }
                 return `
-                  <div class="p-2 rounded-lg bg-secondary-bg dark:bg-dark-secondary-bg text-primary-text dark:text-dark-primary-text font-sans text-sm border border-border-color dark:border-dark-border-color shadow-lg" style="max-width: 200px;">
-                    <div class="font-bold mb-1">${status}: ${value.toLocaleString()} SOs</div>
+                  <div class="p-2 font-sans text-sm" style="max-width: 200px;">
+                    <div class="font-bold mb-1">${name}: ${value.toLocaleString()} SOs (${percent}%)</div>
                     <p class="text-xs text-secondary-text dark:text-dark-secondary-text whitespace-normal">${explanation}</p>
                   </div>
                 `;
             }
         },
+        legend: {
+            bottom: 'bottom',
+            textStyle: {
+                color: labelColor,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 500,
+            },
+            itemGap: 10,
+            icon: 'circle',
+        },
+        series: [
+            {
+                name: 'Reconciliation Status',
+                type: 'pie',
+                radius: ['70%', '90%'],
+                avoidLabelOverlap: false,
+                itemStyle: {
+                  borderRadius: 8,
+                  borderColor: isDark ? '#18181b' : '#F9FAFB',
+                  borderWidth: 4,
+                },
+                label: {
+                    show: true,
+                    position: 'center',
+                    formatter: () => `{total|Total Orders}\n{value|${totalValue.toLocaleString()}}`,
+                    rich: {
+                        total: { fontSize: 14, color: labelColor },
+                        value: { fontSize: 28, fontWeight: 'bold', color: primaryTextColor, padding: [5, 0] },
+                    },
+                },
+                emphasis: {
+                    label: {
+                        show: true,
+                        formatter: (params: any) => `{name|${params.name}}\n{value|${Number(params.value).toLocaleString()}}`,
+                        rich: {
+                            name: { fontSize: 16, color: labelColor },
+                            value: { fontSize: 32, fontWeight: 'bold', color: primaryTextColor, padding: [5, 0] }
+                        }
+                    }
+                },
+                data: chartData.map(d => ({
+                    ...d,
+                    itemStyle: {
+                        opacity: selected && selected !== d.name ? 0.3 : 1
+                    }
+                })),
+            }
+        ],
+        color: ['#10B981', '#F97316'],
+    }), [chartData, totalValue, isDark, labelColor, primaryTextColor, selected]);
+    
+    const onEvents = {
+        'click': (params: any) => {
+            if (params.name) {
+                onSelect(selected === params.name ? null : (params.name as 'Matched' | 'Unsold'));
+            }
+        },
     };
 
     return (
-        <div className="h-full">
-            <ReactApexChart options={options} series={series} type="donut" height="100%" />
+        <div className="h-full" aria-label="Order reconciliation status pie chart" role="figure" tabIndex={0}>
+            <ReactECharts
+                ref={chartRef}
+                option={options}
+                style={{ height: '100%', width: '100%' }}
+                onEvents={onEvents}
+                notMerge={true}
+                lazyUpdate={true}
+            />
         </div>
     );
-};
+});
+
+ReconciliationStatusChart.displayName = 'ReconciliationStatusChart';
 
 export default ReconciliationStatusChart;

@@ -1,6 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-// @google/genai-sdk fix: Add missing icon imports
 import { ExclamationTriangleIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, CheckCircleIcon, ChevronLeftIcon } from '../ui/Icons';
 import { motion, AnimatePresence, HTMLMotionProps } from 'framer-motion';
 

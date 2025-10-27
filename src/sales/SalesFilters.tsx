@@ -1,147 +1,116 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../contexts/DataContext';
 import MultiSelect from '../ui/MultiSelect';
 import type { LocalFiltersState, SalesDateRangePreset } from '../../types';
 import Select from '../ui/Select';
-
-const toYYYYMMDD = (d: Date): string => {
-    const year = d.getUTCFullYear();
-    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(d.getUTCDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-};
-
-const calculateDatesForPreset = (preset: SalesDateRangePreset): { startDate: string | null, endDate: string | null } => {
-    const now = new Date();
-    const y = now.getUTCFullYear();
-    const m = now.getUTCMonth();
-    const d = now.getUTCDate();
-
-    let startDate: Date;
-    let endDate: Date = new Date(Date.UTC(y, m, d));
-
-    if (preset === 'all' || preset === 'custom') {
-        return { startDate: null, endDate: null };
-    }
-
-    switch (preset) {
-        case 'last30':
-            startDate = new Date(Date.UTC(y, m, d));
-            startDate.setUTCDate(startDate.getUTCDate() - 29);
-            break;
-        case 'last90':
-            startDate = new Date(Date.UTC(y, m, d));
-            startDate.setUTCDate(startDate.getUTCDate() - 89);
-            break;
-        case 'thisMonth':
-            startDate = new Date(Date.UTC(y, m, 1));
-            break;
-        case 'lastMonth':
-            startDate = new Date(Date.UTC(y, m - 1, 1));
-            endDate = new Date(Date.UTC(y, m, 0));
-            break;
-        case 'thisQuarter':
-            const q = Math.floor(m / 3);
-            startDate = new Date(Date.UTC(y, q * 3, 1));
-            break;
-        case 'lastQuarter':
-            const currentQuarter = Math.floor(m / 3);
-            const lastQuarterYear = currentQuarter === 0 ? y - 1 : y;
-            const lastQuarterStartMonth = currentQuarter === 0 ? 9 : (currentQuarter - 1) * 3;
-            startDate = new Date(Date.UTC(lastQuarterYear, lastQuarterStartMonth, 1));
-            endDate = new Date(Date.UTC(lastQuarterYear, lastQuarterStartMonth + 3, 0));
-            break;
-        case 'thisYear':
-        default:
-            startDate = new Date(Date.UTC(y, 0, 1));
-            break;
-    }
-
-    return {
-        startDate: toYYYYMMDD(startDate),
-        endDate: toYYYYMMDD(endDate),
-    };
-};
-
-
-const calculateDatesForYearQuarter = (year: string, quarter: string): { startDate: string | null, endDate: string | null } => {
-    if (year === 'all') {
-        return { startDate: null, endDate: null };
-    }
-    const startYear = parseInt(year, 10);
-    if (quarter !== 'all') {
-        const qNum = parseInt(quarter.replace('Q', ''));
-        const startMonth = (qNum - 1) * 3;
-        const startDate = new Date(Date.UTC(startYear, startMonth, 1));
-        const endDate = new Date(Date.UTC(startYear, startMonth + 3, 0));
-        return { startDate: toYYYYMMDD(startDate), endDate: toYYYYMMDD(endDate) };
-    } else { // just year
-        const startDate = new Date(Date.UTC(startYear, 0, 1));
-        const endDate = new Date(Date.UTC(startYear, 11, 31));
-        return { startDate: toYYYYMMDD(startDate), endDate: toYYYYMMDD(endDate) };
-    }
-};
+import { SparklesIcon } from '../ui/Icons';
+import { Spinner } from '../ui/Spinner';
+import { toYYYYMMDD, calculateDatesForPreset, calculateDatesForYearQuarter } from '../../utils/dateHelpers';
 
 
 interface SalesFiltersProps {
   localFilters: LocalFiltersState;
   setLocalFilters: React.Dispatch<React.SetStateAction<LocalFiltersState>>;
+  onBuyerRegionSearch: (region: string) => void;
+  isBuyerRegionLoading: boolean;
 }
 
-const SalesFilters: React.FC<SalesFiltersProps> = ({ localFilters, setLocalFilters }) => {
-  const { availableFilterOptions } = useData();
+const SalesFilters: React.FC<SalesFiltersProps> = ({ localFilters, setLocalFilters, onBuyerRegionSearch, isBuyerRegionLoading }) => {
+  const { salesFilterOptions } = useData();
+  const [regionQuery, setRegionQuery] = useState(localFilters.salesBuyerRegion);
 
-  const handleFilterChange = <K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
-    setLocalFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
+    setLocalFilters(prev => {
+        if (JSON.stringify(prev[key]) === JSON.stringify(value)) return prev;
+        return { ...prev, [key]: value };
+    });
+  }, [setLocalFilters]);
   
-  const handlePresetChange = (preset: SalesDateRangePreset) => {
-    const { startDate, endDate } = calculateDatesForPreset(preset);
-    setLocalFilters(prev => ({
-        ...prev,
-        salesDateRangePreset: preset,
-        salesStartDate: startDate,
-        salesEndDate: endDate,
-        salesYear: 'all',
-        salesQuarter: 'all',
-    }));
-  };
+  const handlePresetChange = useCallback((preset: SalesDateRangePreset) => {
+    setLocalFilters(prev => {
+        if (prev.salesDateRangePreset === preset && preset !== 'custom') return prev;
+        const { startDate, endDate } = calculateDatesForPreset(preset);
+        return {
+            ...prev,
+            salesDateRangePreset: preset,
+            salesStartDate: startDate,
+            salesEndDate: endDate,
+            salesYear: 'all',
+            salesQuarter: 'all',
+        };
+    });
+  }, [setLocalFilters]);
 
-  const handleYearChange = (year: string) => {
-    const { startDate, endDate } = calculateDatesForYearQuarter(year, 'all');
-    setLocalFilters(prev => ({
-        ...prev,
-        salesYear: year,
-        salesQuarter: 'all',
-        salesDateRangePreset: 'custom',
-        salesStartDate: startDate,
-        salesEndDate: endDate,
-    }));
-  };
+  const handleYearChange = useCallback((year: string) => {
+    setLocalFilters(prev => {
+        if (prev.salesYear === year) return prev;
+        const { startDate, endDate } = calculateDatesForYearQuarter(year, 'all');
+        return {
+            ...prev,
+            salesYear: year,
+            salesQuarter: 'all',
+            salesDateRangePreset: 'custom',
+            salesStartDate: startDate,
+            salesEndDate: endDate,
+        };
+    });
+  }, [setLocalFilters]);
 
-  const handleQuarterChange = (quarter: string) => {
-    if (localFilters.salesYear === 'all' && quarter !== 'all') return;
-    const { startDate, endDate } = calculateDatesForYearQuarter(localFilters.salesYear, quarter);
-    setLocalFilters(prev => ({
-        ...prev,
-        salesQuarter: quarter,
-        salesDateRangePreset: 'custom',
-        salesStartDate: startDate,
-        salesEndDate: endDate,
-    }));
-  };
+  const handleQuarterChange = useCallback((quarter: string) => {
+    setLocalFilters(prev => {
+        if (prev.salesYear === 'all' && quarter !== 'all') return prev;
+        if (prev.salesQuarter === quarter) return prev;
+        const { startDate, endDate } = calculateDatesForYearQuarter(prev.salesYear, quarter);
+        return {
+            ...prev,
+            salesQuarter: quarter,
+            salesDateRangePreset: 'custom',
+            salesStartDate: startDate,
+            salesEndDate: endDate,
+        };
+    });
+  }, [setLocalFilters]);
 
-  const handleDateChange = (key: 'salesStartDate' | 'salesEndDate', value: string | null) => {
-    setLocalFilters(prev => ({
-        ...prev,
-        [key]: value,
-        salesDateRangePreset: 'custom',
-        salesYear: 'all',
-        salesQuarter: 'all',
-    }));
-  };
+  const handleDateChange = useCallback((key: 'salesStartDate' | 'salesEndDate', value: string | null) => {
+    setLocalFilters(prev => {
+        if (prev[key] === value) return prev;
+        return {
+            ...prev,
+            [key]: value,
+            salesDateRangePreset: 'custom',
+            salesYear: 'all',
+            salesQuarter: 'all',
+        };
+    });
+  }, [setLocalFilters]);
   
+  // Syncs the local region input state when the global filter is cleared
+  useEffect(() => {
+    if (localFilters.salesBuyerRegion === '' && regionQuery !== '') {
+        setRegionQuery('');
+    }
+  }, [localFilters.salesBuyerRegion, regionQuery]);
+
+  // Debounced effect to trigger the AI search
+  useEffect(() => {
+    // If the user's input is the same as what's already filtered, do nothing.
+    // This is the critical guard that prevents the infinite loop.
+    if (regionQuery === localFilters.salesBuyerRegion) {
+        return;
+    }
+    const handler = setTimeout(() => {
+        onBuyerRegionSearch(regionQuery);
+    }, 800);
+
+    return () => clearTimeout(handler);
+  }, [regionQuery, localFilters.salesBuyerRegion, onBuyerRegionSearch]);
+
+  const handleRegionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value;
+    setRegionQuery(newQuery);
+  };
+
   const datePresets: { label: string; value: SalesDateRangePreset }[] = [
     { label: 'Last 30D', value: 'last30' },
     { label: 'Last 90D', value: 'last90' },
@@ -167,30 +136,61 @@ const SalesFilters: React.FC<SalesFiltersProps> = ({ localFilters, setLocalFilte
       </div>
       <div>
         <MultiSelect
-          label="Product Line"
-          options={availableFilterOptions.orders.productLines}
-          selected={localFilters.salesProductLine}
-          onChange={v => handleFilterChange('salesProductLine', v)}
-          placeholder="Filter product lines..."
-        />
-      </div>
-      <div>
-        <MultiSelect
           label="Segment"
-          options={availableFilterOptions.sales.segments}
+          options={salesFilterOptions.segments}
           selected={localFilters.salesSegment}
           onChange={v => handleFilterChange('salesSegment', v)}
           placeholder="Filter segments..."
         />
       </div>
+       <div>
+        <label htmlFor="buyer-region-search" className="block text-xs text-secondary-text mb-1">Filter Buyers by Region (AI)</label>
+        <div className="relative">
+          <SparklesIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-highlight" />
+          <input
+            id="buyer-region-search"
+            type="text"
+            placeholder="e.g., Phnom Penh, Banteay Meanchey..."
+            value={regionQuery}
+            onChange={handleRegionChange}
+            className="block w-full bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1.5 pl-9 pr-8 text-primary-text dark:text-dark-primary-text placeholder-secondary-text dark:placeholder-dark-secondary-text focus:outline-none focus:ring-2 focus:ring-highlight sm:text-sm"
+          />
+          {isBuyerRegionLoading && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <Spinner size="sm" />
+            </div>
+          )}
+        </div>
+      </div>
       <div>
         <MultiSelect
           label="Buyer"
-          options={availableFilterOptions.sales.buyers}
+          options={salesFilterOptions.buyers}
           selected={localFilters.salesBuyer}
           onChange={v => handleFilterChange('salesBuyer', v)}
           placeholder="Filter buyers..."
+          disabledOptions={localFilters.salesBuyerRegion ? salesFilterOptions.buyers : []}
         />
+      </div>
+      <div>
+        <label className="block text-xs text-secondary-text mb-1">Filter by Invoice Revenue</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            placeholder="Min"
+            value={localFilters.salesRevenueMin ?? ''}
+            onChange={e => handleFilterChange('salesRevenueMin', e.target.value ? Number(e.target.value) : null)}
+            className="block w-full bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1.5 px-3 text-primary-text dark:text-dark-primary-text placeholder-secondary-text dark:placeholder-dark-secondary-text focus:outline-none focus:ring-2 focus:ring-highlight sm:text-sm"
+          />
+          <span className="text-secondary-text dark:text-dark-secondary-text">-</span>
+          <input
+            type="number"
+            placeholder="Max"
+            value={localFilters.salesRevenueMax ?? ''}
+            onChange={e => handleFilterChange('salesRevenueMax', e.target.value ? Number(e.target.value) : null)}
+            className="block w-full bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1.5 px-3 text-primary-text dark:text-dark-primary-text placeholder-secondary-text dark:placeholder-dark-secondary-text focus:outline-none focus:ring-2 focus:ring-highlight sm:text-sm"
+          />
+        </div>
       </div>
       
       <div className="w-full border-t border-border-color dark:border-dark-border-color mt-3 pt-4">
@@ -217,10 +217,10 @@ const SalesFilters: React.FC<SalesFiltersProps> = ({ localFilters, setLocalFilte
             </div>
             <div className="flex gap-4">
                 <div className="flex-1">
-                    <Select label="Year" value={localFilters.salesYear} onChange={handleYearChange} options={availableFilterOptions.sales.years} />
+                    <Select label="Year" value={localFilters.salesYear} onChange={handleYearChange} options={salesFilterOptions.years} />
                 </div>
                 <div className="flex-1">
-                    <Select label="Quarter" value={localFilters.salesQuarter} onChange={handleQuarterChange} options={availableFilterOptions.sales.quarters} />
+                    <Select label="Quarter" value={localFilters.salesQuarter} onChange={handleQuarterChange} options={salesFilterOptions.quarters} />
                 </div>
             </div>
             <AnimatePresence>

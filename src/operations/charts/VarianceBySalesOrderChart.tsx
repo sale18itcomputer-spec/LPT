@@ -1,7 +1,6 @@
-import React, { useMemo, useContext } from 'react';
-import ReactApexChart from 'react-apexcharts';
-import type { ApexOptions } from 'apexcharts';
-import Card from '../../ui/Card';
+import React, { useMemo, useContext, useRef, useEffect } from 'react';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
 import { DocumentMagnifyingGlassIcon } from '../../ui/Icons';
 import { ThemeContext } from '../../../contexts/ThemeContext';
 import type { Order, Sale } from '../../../types';
@@ -9,16 +8,25 @@ import type { Order, Sale } from '../../../types';
 interface ChartProps {
     orders: Order[];
     sales: Sale[];
+    onSelect: (so: string | null) => void;
+    selected: string | null;
 }
 
-const VarianceBySalesOrderChart: React.FC<ChartProps> = ({ orders, sales }) => {
+const VarianceBySalesOrderChart: React.FC<ChartProps> = React.memo(({ orders, sales, onSelect, selected }) => {
+    const chartRef = useRef<ReactECharts>(null);
     const themeContext = useContext(ThemeContext);
-    const { theme } = themeContext!;
-    const isDark = theme === 'dark';
+    const isDark = themeContext?.theme === 'dark';
 
     const labelColor = isDark ? '#d4d4d8' : '#4B5563';
     const dataLabelColor = isDark ? '#f9fafb' : '#1F2937';
     const gridBorderColor = isDark ? '#3f3f46' : '#E5E7EB';
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            chartRef.current?.getEchartsInstance().resize();
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
 
     const chartData = useMemo(() => {
         const varianceBySo = new Map<string, { orderQty: number, saleQty: number }>();
@@ -50,8 +58,7 @@ const VarianceBySalesOrderChart: React.FC<ChartProps> = ({ orders, sales }) => {
 
         return {
             categories: sorted.map(d => d.so),
-            series: [{ name: 'Unit Variance', data: sorted.map(d => d.variance) }],
-            fullData: sorted
+            data: sorted,
         };
     }, [orders, sales]);
 
@@ -59,27 +66,28 @@ const VarianceBySalesOrderChart: React.FC<ChartProps> = ({ orders, sales }) => {
         return <div className="flex flex-col items-center justify-center h-full text-secondary-text p-4 text-center"><DocumentMagnifyingGlassIcon className="h-10 w-10 mb-2" /><p className="text-sm">No sales orders with unit variances found.</p></div>;
     }
     
-    const options: ApexOptions = {
-        chart: { type: 'bar', height: '100%', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-        plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 4, dataLabels: { position: 'top' } } },
-        dataLabels: { enabled: true, formatter: (val) => `${Number(val) > 0 ? '+' : ''}${val}`, offsetX: 20, style: { colors: [dataLabelColor] } },
-        colors: [({ value }) => Number(value) > 0 ? '#3B82F6' : '#F97316'],
-        xaxis: { categories: chartData.categories, labels: { show: false }, axisBorder: { show: false }, axisTicks: { show: false } },
-        yaxis: { labels: { style: { colors: labelColor, fontSize: '12px' } } },
-        grid: { show: true, borderColor: gridBorderColor, strokeDashArray: 0, xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } }, padding: { top: 0, right: 30, bottom: 0, left: 10 } },
-        legend: { show: false },
+    const options: EChartsOption = useMemo(() => ({
+        grid: {
+            left: '3%',
+            right: '10%',
+            top: '3%',
+            bottom: '3%',
+            containLabel: true
+        },
         tooltip: {
-            theme: isDark ? 'dark' : 'light',
-            x: { show: false },
-            custom: function({ dataPointIndex }) {
-                const item = chartData.fullData[dataPointIndex];
+            trigger: 'item',
+            backgroundColor: isDark ? 'rgba(39, 39, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: isDark ? '#3f3f46' : '#e4e4e7',
+            textStyle: { color: isDark ? '#f9fafb' : '#18181b' },
+            formatter: (params: any) => {
+                const item = chartData.data.find(d => d.so === params.name);
                 if (!item) return '';
     
-                const varianceText = item.variance > 0 ? `+${item.variance} (Undersold)` : `${item.variance} (Oversold)`;
-                const varianceColor = item.variance > 0 ? 'text-blue-600' : 'text-orange-600';
+                const varianceText = item.variance > 0 ? `+${item.variance} (Unsold)` : `${item.variance} (Oversold)`;
+                const varianceColor = item.variance > 0 ? 'text-orange-500' : 'text-red-500';
     
                 return `
-                    <div class="p-2 rounded-lg bg-secondary-bg dark:bg-dark-secondary-bg text-primary-text dark:text-dark-primary-text font-sans text-sm border border-border-color dark:border-dark-border-color shadow-lg">
+                    <div class="p-2 font-sans text-sm">
                       <div class="font-bold mb-1">${item.so}</div>
                       <div class="grid grid-cols-[auto,1fr] gap-x-4">
                           <span>Ordered Qty:</span><span class="font-semibold text-right">${item.orderQty.toLocaleString()}</span>
@@ -91,13 +99,66 @@ const VarianceBySalesOrderChart: React.FC<ChartProps> = ({ orders, sales }) => {
                 `;
             }
         },
+        xAxis: {
+            type: 'value',
+            axisLabel: { show: false },
+            axisLine: { show: false },
+            axisTick: { show: false },
+            splitLine: { show: true, lineStyle: { color: gridBorderColor, type: 'dashed' } },
+        },
+        yAxis: {
+            type: 'category',
+            data: chartData.categories,
+            axisLabel: { color: labelColor, fontSize: 12 },
+            axisLine: { show: false },
+            axisTick: { show: false },
+        },
+        series: [{
+            name: 'Unit Variance',
+            type: 'bar',
+            barWidth: '60%',
+            label: {
+                show: true,
+                position: 'right',
+                formatter: (params: any) => Number(params.value) > 0 ? `+${params.value}` : String(params.value),
+                color: dataLabelColor,
+                fontWeight: 'bold',
+                distance: 10,
+            },
+            data: chartData.data.map(item => ({
+                value: item.variance,
+                name: item.so,
+                itemStyle: {
+                    color: item.variance > 0 ? (isDark ? '#F97316' : '#FB923C') : (isDark ? '#DC2626' : '#EF4444'),
+                    borderRadius: 4,
+                    opacity: selected && selected !== item.so ? 0.3 : 1,
+                }
+            }))
+        }]
+    }), [chartData, isDark, labelColor, dataLabelColor, gridBorderColor, selected]);
+
+    const onEvents = {
+        'click': (params: any) => {
+            if (params.name) {
+                onSelect(selected === params.name ? null : params.name);
+            }
+        },
     };
 
     return (
-        <div className="h-full">
-            <ReactApexChart options={options} series={chartData.series} type="bar" height="100%" />
+        <div className="h-full" aria-label="Top 10 sales orders by unit variance" role="figure" tabIndex={0}>
+            <ReactECharts
+                ref={chartRef}
+                option={options}
+                style={{ height: '100%', width: '100%' }}
+                onEvents={onEvents}
+                notMerge={true}
+                lazyUpdate={true}
+            />
         </div>
     );
-};
+});
+
+VarianceBySalesOrderChart.displayName = 'VarianceBySalesOrderChart';
 
 export default VarianceBySalesOrderChart;

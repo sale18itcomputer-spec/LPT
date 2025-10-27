@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useTasks } from '../../contexts/TasksContext';
@@ -10,9 +11,9 @@ import {
     ExclamationTriangleIcon, 
     PlusIcon,
     CheckIcon
-} from '../ui/Icons';
+} from './ui/Icons';
 import TasksSkeleton from './tasks/TasksSkeleton';
-import { columnHeaderConfig } from './taskConstants';
+import { columnHeaderConfig } from './tasks/taskConstants';
 
 const isDueThisWeek = (dateString: string | null | undefined): boolean => {
     if (!dateString) return false;
@@ -61,7 +62,6 @@ const TasksDashboard: React.FC<TasksDashboardProps> = ({ localFilters, setSideba
     const filteredAndSortedTasks = useMemo(() => {
         let filtered = [...tasks];
 
-        // FIX: Destructure taskQuickFilter directly as it's part of LocalFiltersState
         const { taskSearchTerm, taskStatus, taskSortBy, taskSortDir, taskQuickFilter } = localFilters;
         
         if (taskQuickFilter === 'dueThisWeek') {

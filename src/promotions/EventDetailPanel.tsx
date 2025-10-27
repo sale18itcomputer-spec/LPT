@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { HistoricalHolidaySalesAnalysis } from '../../types';
@@ -7,7 +9,6 @@ import AIPromotionPlanner from './AIPromotionPlanner';
 import HistoricalSalesChart from './HistoricalSalesChart';
 import SegmentRevenueChart from './SegmentRevenueChart';
 import SurplusStockChart from './SurplusStockChart';
-// FIX: Add missing icon import
 import { DocumentMagnifyingGlassIcon, SparklesIcon, CalendarDaysIcon, ChevronLeftIcon } from '../ui/Icons';
 
 interface EventDetailPanelProps {
@@ -25,6 +26,11 @@ const MotionDiv = motion.div as any;
 
 const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ holiday, historicalAnalysis }) => {
     const [activeTab, setActiveTab] = useState<'ai' | 'historical'>('ai');
+    const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
+
+    const handleSegmentSelect = (segment: string | null) => {
+        setSelectedSegment(prev => prev === segment ? null : segment);
+    };
 
     return (
         <Card className="p-0 h-full flex flex-col">
@@ -64,7 +70,7 @@ const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ holiday, historical
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div>
                                                 <h3 className="font-semibold text-primary-text mb-2">Revenue by Segment</h3>
-                                                <div className="h-48"><SegmentRevenueChart segments={historicalAnalysis.topSegments} /></div>
+                                                <div className="h-48"><SegmentRevenueChart segments={historicalAnalysis.topSegments} onSegmentSelect={handleSegmentSelect} selectedSegment={selectedSegment} /></div>
                                             </div>
                                             <div>
                                                 <h3 className="font-semibold text-primary-text mb-2">Surplus Stock with Low Sales</h3>

@@ -66,7 +66,6 @@ const ExpandedDetailView: React.FC<{ items: Sale[] }> = ({ items }) => (
 
 interface SalesTableProps {
   sales: Sale[];
-  onNavigateAndFilter: (target: DashboardType, searchTerm: string) => void;
 }
 
 const SalesTable: React.FC<SalesTableProps> = ({ sales }) => {
@@ -77,7 +76,6 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales }) => {
   const itemsPerPageId = useId();
 
   const groupedSales: AugmentedInvoice[] = useMemo(() => {
-    // FIX: Explicitly type the accumulator in the reduce function to ensure correct type inference.
     const invoices = sales.reduce((acc: Record<string, AugmentedInvoice>, sale) => {
         if (!acc[sale.invoiceNumber]) {
             acc[sale.invoiceNumber] = { invoiceNumber: sale.invoiceNumber, items: [], totalQuantity: 0, totalRevenue: 0, invoiceDate: sale.invoiceDate, buyerName: sale.buyerName, itemCount: 0 };
@@ -87,7 +85,6 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales }) => {
         acc[sale.invoiceNumber].totalRevenue += sale.totalRevenue;
         return acc;
     }, {} as Record<string, AugmentedInvoice>);
-    // FIX: Explicitly type `inv` to avoid it being inferred as `unknown`.
     Object.values(invoices).forEach((inv: AugmentedInvoice) => (inv.itemCount = inv.items.length));
     return Object.values(invoices);
   }, [sales]);

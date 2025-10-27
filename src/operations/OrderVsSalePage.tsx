@@ -1,12 +1,14 @@
+
+
 import React, { useMemo, useState, Fragment, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../contexts/DataContext';
 import Card from '../ui/Card';
 import KpiCard from '../ui/KpiCard';
+// FIX: Import ChartCard component
 import ChartCard from '../ui/ChartCard';
 import { Order, Sale, DashboardType, LocalFiltersState, ReconciledSale, ViewType } from '../../types';
 import { ArrowsRightLeftIcon, CubeIcon, TableCellsIcon, BanknotesIcon, ExclamationTriangleIcon, ChevronUpIcon, ChevronDownIcon, ChevronRightIcon, CheckCircleIcon, XCircleIcon, CalendarDaysIcon, TrophyIcon, DocumentMagnifyingGlassIcon } from '../ui/Icons';
-import OrderVsSaleComparisonChart from './OrderVsSaleComparisonChart';
 import ReconciliationStatusChart from './charts/ReconciliationStatusChart';
 import ValueReconciliationChart from './charts/ValueReconciliationChart';
 import VarianceBySalesOrderChart from './charts/VarianceBySalesOrderChart';
@@ -329,10 +331,26 @@ const ReconciliationTable: React.FC<{
 interface OrderVsSalePageProps {
     onNavigateAndFilter: (view: ViewType, filters: Partial<LocalFiltersState>) => void;
     localFilters: LocalFiltersState;
+    setLocalFilters: React.Dispatch<React.SetStateAction<LocalFiltersState>>;
 }
 
-const OrderVsSalePage: React.FC<OrderVsSalePageProps> = ({ onNavigateAndFilter, localFilters }) => {
+const OrderVsSalePage: React.FC<OrderVsSalePageProps> = ({ onNavigateAndFilter, localFilters, setLocalFilters }) => {
     const { allOrders, allSales, reconciledSales, allShipments, allBackpackCosts } = useData();
+
+    const handleStatusSelect = useCallback((status: 'Matched' | 'Unsold' | null) => {
+        const newStatus = status || 'all';
+        setLocalFilters(prev => ({
+            ...prev,
+            orderVsSaleStatus: prev.orderVsSaleStatus === newStatus ? 'all' : newStatus
+        }));
+    }, [setLocalFilters]);
+    
+    const handleSOSelect = useCallback((so: string | null) => {
+        setLocalFilters(prev => ({
+            ...prev,
+            orderVsSaleSearchTerm: prev.orderVsSaleSearchTerm === so ? '' : (so || '')
+        }));
+    }, [setLocalFilters]);
 
     const augmentedSales: AugmentedSale[] = useMemo(() => {
         const serialToSoMap = new Map<string, string>();
@@ -407,11 +425,10 @@ const OrderVsSalePage: React.FC<OrderVsSalePageProps> = ({ onNavigateAndFilter, 
     }, [allOrders, augmentedSales, serialToReconciledSale, shipmentCostMap, accessoryCostMap]);
 
     const filteredGroups = useMemo(() => {
-        const { orderVsSaleSearchTerm, orderVsSaleProductLine, orderVsSaleStatus, orderVsSaleSegment } = localFilters;
+        const { orderVsSaleSearchTerm, orderVsSaleStatus, orderVsSaleSegment } = localFilters;
         return reconciliationGroups.filter(group => {
             if (orderVsSaleSearchTerm && !(group.salesOrder.toLowerCase().includes(orderVsSaleSearchTerm.toLowerCase()) || group.orders.some(o => o.mtm.toLowerCase().includes(orderVsSaleSearchTerm.toLowerCase())))) return false;
             if (orderVsSaleStatus !== 'all' && group.status !== orderVsSaleStatus) return false;
-            if (orderVsSaleProductLine.length > 0 && !group.orders.some(o => orderVsSaleProductLine.includes(o.productLine))) return false;
             if (orderVsSaleSegment.length > 0 && !group.orders.some(o => o.segment && orderVsSaleSegment.includes(o.segment))) return false;
             return true;
         });
@@ -455,15 +472,12 @@ const OrderVsSalePage: React.FC<OrderVsSalePageProps> = ({ onNavigateAndFilter, 
                 
                 <div className="space-y-6 mt-6">
                     <div className="space-y-6">
-                       <ChartCard title="Unit Comparison by Product Line" description="Compares the total unit volume of all historical orders that have corresponding sales against the total units from those sales." className="h-[450px]">
-                            <OrderVsSaleComparisonChart orders={ordersForCharts} sales={salesForCharts} allOrders={allOrders} />
-                        </ChartCard>
                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                           <ChartCard title="Reconciliation Status" description="Breakdown of matched sales orders by fulfillment status." className="h-[400px]"><ReconciliationStatusChart orders={ordersForCharts} sales={salesForCharts} /></ChartCard>
+                           <ChartCard title="Reconciliation Status" description="Breakdown of matched sales orders by fulfillment status." className="h-[400px]"><ReconciliationStatusChart orders={ordersForCharts} sales={salesForCharts} onSelect={handleStatusSelect} selected={localFilters.orderVsSaleStatus === 'all' ? null : localFilters.orderVsSaleStatus} /></ChartCard>
                            <ChartCard title="Value Reconciliation Over Time" description="Monthly FOB value of matched orders vs. revenue of matched sales." className="h-[400px]"><ValueReconciliationChart orders={ordersForCharts} sales={salesForCharts} /></ChartCard>
                        </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <ChartCard title="Top SO Variances" description="Sales orders with the largest unit discrepancies." className="h-[400px]"><VarianceBySalesOrderChart orders={ordersForCharts} sales={salesForCharts} /></ChartCard>
+                            <ChartCard title="Top SO Variances" description="Sales orders with the largest unit discrepancies." className="h-[400px]"><VarianceBySalesOrderChart orders={ordersForCharts} sales={salesForCharts} onSelect={handleSOSelect} selected={localFilters.orderVsSaleSearchTerm} /></ChartCard>
                             <ChartCard title="Unit Variance Over Time" description="Monthly ordered vs. sold units for matched items." className="h-[400px]"><UnitVarianceTimeSeriesChart orders={ordersForCharts} sales={salesForCharts} /></ChartCard>
                         </div>
                     </div>

@@ -89,6 +89,13 @@ export const ArrowTrendingUpIcon: React.FC<IconProps> = (props) => (
     </svg>
 );
 
+export const ArrowUpIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M12 5l0 14" /><path d="M16 9l-4 -4l-4 4" />
+    </svg>
+);
+
 export const ArrowUpCircleIcon: React.FC<IconProps> = (props) => (
     <svg {...defaultProps} {...props}>
         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -371,6 +378,13 @@ export const FireIcon: React.FC<IconProps> = (props) => (
     </svg>
 );
 
+export const FunnelIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z" />
+    </svg>
+);
+
 export const GiftIcon: React.FC<IconProps> = (props) => (
     <svg {...defaultProps} {...props}>
         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -429,6 +443,14 @@ export const MagnifyingGlassIcon: React.FC<IconProps> = (props) => (
         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
         <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
         <path d="M21 21l-6 -6" />
+    </svg>
+);
+
+export const MapPinIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+        <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" />
     </svg>
 );
 

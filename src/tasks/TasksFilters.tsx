@@ -1,5 +1,3 @@
-
-
 import React, { useMemo, useCallback } from 'react';
 import { useTasks } from '../../contexts/TasksContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,14 +15,20 @@ const TasksFilters: React.FC<TasksFiltersProps> = ({ localFilters, setLocalFilte
 
     const allStatuses: TaskStatus[] = ['Planning', 'In Progress', 'Done', 'Canceled', 'Paused', 'Backlog'];
 
-    const handleFilterChange = <K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
-        setLocalFilters(prev => ({ ...prev, [key]: value }));
-    };
+    const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
+        setLocalFilters(prev => {
+            if (JSON.stringify(prev[key]) === JSON.stringify(value)) return prev;
+            return { ...prev, [key]: value };
+        });
+    }, [setLocalFilters]);
     
-    const handleSortChange = (value: string) => {
+    const handleSortChange = useCallback((value: string) => {
         const [by, dir] = value.split('_');
-        setLocalFilters(prev => ({ ...prev, taskSortBy: by as TaskSortOption, taskSortDir: dir as TaskSortDirection }));
-    };
+        setLocalFilters(prev => {
+            if (prev.taskSortBy === by && prev.taskSortDir === dir) return prev;
+            return { ...prev, taskSortBy: by as TaskSortOption, taskSortDir: dir as TaskSortDirection };
+        });
+    }, [setLocalFilters]);
 
 
     return (

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { LocalFiltersState } from '../../types';
 import { GlobeAltIcon, BarsArrowUpIcon, MinusIcon, BarsArrowDownIcon } from '../ui/Icons';
 
@@ -17,14 +17,17 @@ const priorityOptions: { label: string; value: LocalFiltersState['backorderPrior
 
 const BackorderFilters: React.FC<BackorderFiltersProps> = ({ localFilters, setLocalFilters }) => {
 
-  const handleFilterChange = <K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
-    setLocalFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
+    setLocalFilters(prev => {
+        if (prev[key] === value) return prev;
+        return { ...prev, [key]: value };
+    });
+  }, [setLocalFilters]);
 
   return (
     <>
       <div>
-        <label htmlFor="backorder-search" className="block text-xs text-secondary-text dark:text-dark-secondary-text mb-1">Search MTM / Model / Product Line</label>
+        <label htmlFor="backorder-search" className="block text-xs text-secondary-text dark:text-dark-secondary-text mb-1">Search MTM / Model</label>
         <input
           id="backorder-search"
           type="text"

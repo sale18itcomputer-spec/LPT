@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { LocalFiltersState } from '../../types';
 import Select from '../ui/Select';
 import { GlobeAltIcon, ShieldCheckIcon, FireIcon, ExclamationTriangleIcon, ArchiveBoxIcon } from '../ui/Icons';
@@ -7,7 +7,6 @@ import { GlobeAltIcon, ShieldCheckIcon, FireIcon, ExclamationTriangleIcon, Archi
 interface InventoryFiltersProps {
   localFilters: LocalFiltersState;
   setLocalFilters: React.Dispatch<React.SetStateAction<LocalFiltersState>>;
-  productLineOptions: string[];
 }
 
 const filterOptions: { label: string; value: LocalFiltersState['stockStatus']; icon: React.FC<any> }[] = [
@@ -19,11 +18,14 @@ const filterOptions: { label: string; value: LocalFiltersState['stockStatus']; i
 ];
 
 
-const InventoryFilters: React.FC<InventoryFiltersProps> = ({ localFilters, setLocalFilters, productLineOptions }) => {
+const InventoryFilters: React.FC<InventoryFiltersProps> = ({ localFilters, setLocalFilters }) => {
   
-  const handleFilterChange = <K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
-    setLocalFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
+    setLocalFilters(prev => {
+        if (prev[key] === value) return prev;
+        return { ...prev, [key]: value };
+    });
+  }, [setLocalFilters]);
 
   return (
     <>
@@ -36,14 +38,6 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({ localFilters, setLo
           value={localFilters.inventorySearchTerm}
           onChange={(e) => handleFilterChange('inventorySearchTerm', e.target.value)}
           className="block w-full bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1.5 px-3 text-primary-text dark:text-dark-primary-text placeholder-secondary-text dark:placeholder-dark-secondary-text focus:outline-none focus:ring-2 focus:ring-highlight sm:text-sm"
-        />
-      </div>
-      <div>
-         <Select
-            label="Product Line"
-            value={localFilters.inventoryProductLine}
-            onChange={(v) => handleFilterChange('inventoryProductLine', v)}
-            options={productLineOptions}
         />
       </div>
        <div>

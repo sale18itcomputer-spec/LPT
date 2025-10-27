@@ -109,7 +109,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
             ShipDate: 'Schedule ship date', dateIssuePI: 'Order Receipt Date', eta: 'ETA', actualArrival: 'Actual Arrival',
             deliveryNumber: 'Delivery Number',
             // Non-editable fields:
-            productLine: 'Product Line', salesOrder: 'Sales Order Number', mtm: 'Product ID', modelName: 'Model Name',
+            salesOrder: 'Sales Order Number', mtm: 'Product ID', modelName: 'Model Name',
             orderValue: 'Amount ( $ )', isDelayedProduction: 'isDelayedProduction', isDelayedTransit: 'isDelayedTransit',
             isAtRisk: 'isAtRisk', segment: 'Segment', landingCostUnitPrice: 'Add on Unit Price',
         };
@@ -264,7 +264,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
                                   <h3 className="text-sm font-semibold uppercase tracking-wider text-blue-600 border-b border-border-color pb-2">Product Info</h3>
                                   <DetailItem icon={<TagIcon />} label="Model Name" value={order.modelName} />
                                   <DetailItem icon={<TagIcon />} label="MTM" value={<span className="flex items-center gap-x-2">{order.mtm}{isNewModel && <NewModelBadge />}</span>} />
-                                  <DetailItem icon={<TagIcon />} label="Product Line" value={order.productLine} />
                                   <DetailItem icon={<TagIcon />} label="Specification" value={<span className="text-xs whitespace-pre-wrap">{order.specification}</span>} />
                               </div>
                               <div className="space-y-6">

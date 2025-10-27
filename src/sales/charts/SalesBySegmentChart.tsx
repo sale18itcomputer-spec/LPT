@@ -1,24 +1,29 @@
-
-
-import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useMemo, useContext } from 'react';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
 import { DocumentMagnifyingGlassIcon } from '../../ui/Icons';
 import type { Sale } from '../../../types';
+import { ThemeContext } from '../../../contexts/ThemeContext';
+
+const compactCurrencyFormatter = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(val);
 
 interface SalesBySegmentChartProps {
   data: Sale[];
-  onSegmentSelect: (segment: string) => void;
+  onSegmentSelect: (segment: string | null) => void;
   selectedSegment: string | null;
   itemCount: number;
 }
 
-const currencyFormatter = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
-const compactCurrencyFormatter = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(val);
+const PALETTE = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6366F1'];
 
-const SalesBySegmentChart: React.FC<SalesBySegmentChartProps> = ({ data, onSegmentSelect, selectedSegment, itemCount }) => {
+const SalesBySegmentChart: React.FC<SalesBySegmentChartProps> = React.memo(({ data, onSegmentSelect, selectedSegment }) => {
+    const themeContext = useContext(ThemeContext);
+    const isDark = themeContext?.theme === 'dark';
+    
+    const labelColor = isDark ? '#d4d4d8' : '#4B5563';
+    const primaryTextColor = isDark ? '#f9fafb' : '#1F2937';
 
-    const { segmentData } = useMemo(() => {
-        // FIX: Explicitly type the accumulator in the reduce function to ensure correct type inference.
+    const { segmentData, totalRevenue } = useMemo(() => {
         const aggregated = data.reduce((acc: Record<string, number>, sale) => {
             const segment = sale.segment || 'Unknown';
             if (segment === 'N/A') return acc;
@@ -26,14 +31,15 @@ const SalesBySegmentChart: React.FC<SalesBySegmentChartProps> = ({ data, onSegme
             return acc;
         }, {} as Record<string, number>);
         
+        const total = Object.values(aggregated).reduce((sum, val) => sum + val, 0);
+
         return {
+            totalRevenue: total,
             segmentData: Object.entries(aggregated)
                 .map(([name, value]) => ({ name, value }))
-                // FIX: Explicitly type sort parameters `a` and `b` to fix type inference.
-                .sort((a: { value: number }, b: { value: number }) => b.value - a.value)
-                .slice(0, itemCount),
+                .sort((a, b) => b.value - a.value),
         };
-    }, [data, itemCount]);
+    }, [data]);
 
     if (segmentData.length === 0) {
         return (
@@ -44,60 +50,106 @@ const SalesBySegmentChart: React.FC<SalesBySegmentChartProps> = ({ data, onSegme
         );
     }
     
-    const maxRevenue = Math.max(...segmentData.map(d => d.value), 1);
+    const option: EChartsOption = useMemo(() => {
+        return {
+            tooltip: {
+                trigger: 'item',
+                formatter: (params: any) => {
+                    const { name, value, percent } = params;
+                    const formattedValue = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+                    return `<strong>${name}</strong><br/>${formattedValue} (${percent}%)`;
+                },
+                backgroundColor: isDark ? 'rgba(39, 39, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                borderColor: isDark ? '#3f3f46' : '#e4e4e7',
+                textStyle: { color: isDark ? '#f9fafb' : '#18181b' }
+            },
+            legend: {
+                orient: 'horizontal',
+                left: 'center',
+                bottom: 10,
+                textStyle: { color: labelColor },
+                icon: 'circle',
+                selectedMode: 'multiple',
+            },
+            series: [
+                {
+                    name: 'Revenue by Segment',
+                    type: 'pie',
+                    radius: ['70%', '90%'],
+                    center: ['50%', '45%'],
+                    avoidLabelOverlap: true,
+                    itemStyle: {
+                        borderRadius: 8,
+                        borderColor: isDark ? '#27272a' : '#FFFFFF',
+                        borderWidth: 2,
+                    },
+                    label: {
+                        show: false,
+                        position: 'center'
+                    },
+                    emphasis: {
+                        scale: true,
+                        scaleSize: 10,
+                        label: {
+                            show: true,
+                            formatter: '{b}\n{d}%',
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                            color: primaryTextColor
+                        },
+                    },
+                    labelLine: { show: false },
+                    data: segmentData.map((item, index) => ({
+                        value: item.value,
+                        name: item.name,
+                        itemStyle: {
+                            color: PALETTE[index % PALETTE.length],
+                            opacity: selectedSegment && selectedSegment !== item.name ? 0.4 : 1,
+                        }
+                    }))
+                }
+            ],
+            title: {
+                text: 'Total Revenue',
+                subtext: compactCurrencyFormatter(totalRevenue),
+                left: '49%',
+                top: '42%',
+                textAlign: 'center',
+                textStyle: {
+                    color: labelColor,
+                    fontSize: 14,
+                    fontWeight: 'normal',
+                },
+                subtextStyle: {
+                    color: primaryTextColor,
+                    fontSize: 24,
+                    fontWeight: 'bold'
+                }
+            }
+        };
+    }, [segmentData, totalRevenue, isDark, labelColor, primaryTextColor, selectedSegment]);
+
+    const onEvents = {
+        'click': (params: any) => {
+            if (params.name) {
+                onSegmentSelect(selectedSegment === params.name ? null : params.name);
+            }
+        },
+    };
     
     return (
-        <motion.div 
-            className="space-y-4 p-4 sm:p-6 h-full flex flex-col"
-            initial="hidden"
-            animate="visible"
-            variants={{
-                visible: { transition: { staggerChildren: 0.05 } }
-            }}
-        >
-            {segmentData.map((item) => {
-                const barWidth = (item.value / maxRevenue) * 100;
-
-                return (
-                    <motion.div
-                        key={item.name}
-                        onClick={() => onSegmentSelect(item.name)}
-                        title={`${item.name}: ${currencyFormatter(item.value)}`}
-                        className={`cursor-pointer group transition-all duration-200 ${selectedSegment && selectedSegment !== item.name ? 'opacity-50 hover:opacity-100' : 'opacity-100'}`}
-                        variants={{
-                            hidden: { opacity: 0, x: -20 },
-                            visible: { opacity: 1, x: 0 }
-                        }}
-                         whileHover={{ scale: 1.01 }}
-                    >
-                        <div className="flex justify-between items-center text-sm mb-1.5">
-                            <span className="font-medium text-primary-text dark:text-dark-primary-text truncate">{item.name}</span>
-                            <span className="text-secondary-text dark:text-dark-secondary-text">{currencyFormatter(item.value)}</span>
-                        </div>
-                        <div className="w-full bg-gray-100 dark:bg-dark-border-color rounded-lg h-6 overflow-hidden">
-                            <motion.div
-                                className="bg-blue-500 h-full rounded-lg flex items-center"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${barWidth}%` }}
-                                transition={{ duration: 0.8, ease: [0.25, 1, 0.5, 1] }}
-                            >
-                                {barWidth > 15 && (
-                                    <motion.div
-                                        className="ml-1.5 bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        transition={{ delay: 0.5 }}
-                                    >
-                                        {compactCurrencyFormatter(item.value)}
-                                    </motion.div>
-                                )}
-                            </motion.div>
-                        </div>
-                    </motion.div>
-                );
-            })}
-        </motion.div>
+        <div className="h-full w-full" aria-label="Revenue by customer segment pie chart" role="figure" tabIndex={0}>
+            <ReactECharts
+                option={option}
+                style={{ height: '350px', width: '100%' }}
+                onEvents={onEvents}
+                notMerge={true}
+                lazyUpdate={true}
+            />
+        </div>
     );
-};
+});
+
+SalesBySegmentChart.displayName = 'SalesBySegmentChart';
 
 export default SalesBySegmentChart;

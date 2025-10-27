@@ -1,10 +1,12 @@
+
 import React, { createContext, useContext, useState, useMemo, useCallback, ReactNode, useEffect } from 'react';
 import type { 
-    Order, Sale, UnifiedFilterOptions, InventoryItem, Customer, 
+    Order, Sale, InventoryItem, Customer, 
     BackorderRecommendation, CustomerSalesOpportunity, CustomerTier, SalesOpportunity, 
     InventoryItemYearlyBreakdown, OrderKpiData, SalesKpiData, PromotionCandidate, SerializedItem,
     RebateProgram, RebateKpiData, RebateDetail, RebateSale, Shipment, ReconciledSale, ProfitabilityKpiData,
-    AccessoryCost, RebateBreakdown, PriceListItem, AugmentedShipmentGroup
+    AccessoryCost, RebateBreakdown, PriceListItem, AugmentedShipmentGroup,
+    FilterOptions, SaleFilterOptions
 } from '../types';
 import { useOrderData } from '../hooks/useOrderData';
 import { useSaleData } from '../hooks/useSaleData';
@@ -62,9 +64,8 @@ interface DataContextType {
     allBackpackCosts: AccessoryCost[];
     allPriceListItems: PriceListItem[];
     // KPIs
-// FIX: Add missing KPI data properties to the context type.
-    orderKpiData: OrderKpiData | undefined;
-    salesKpiData: SalesKpiData | undefined;
+    orderKpiData?: OrderKpiData;
+    salesKpiData?: SalesKpiData;
     totalOrderCount: number;
     allInvoicesCount: number;
     // Derived Data
@@ -82,7 +83,8 @@ interface DataContextType {
     allRebateDetails: RebateDetail[];
     allRebateSales: RebateSale[];
     // Filter Options
-    availableFilterOptions: UnifiedFilterOptions;
+    orderFilterOptions: FilterOptions;
+    salesFilterOptions: SaleFilterOptions;
     // Reconciliation
     reconciledSales: ReconciledSale[];
     profitabilityKpiData: ProfitabilityKpiData;
@@ -146,7 +148,6 @@ const parseDateToUtc = (dateString: string | null | undefined): Date | null => {
     return null;
 };
 
-// FIX: Added interface for the accumulator in customersById reduce function.
 interface CustomerAccumulator {
     id: string;
     name: string;
@@ -202,37 +203,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return dominantSegmentMap;
     }, [rawAllSales]);
 
-    // FIX: Create a map from MTM to product line from the raw order data.
-    const mtmToProductLineMap = useMemo(() => {
-        const map = new Map<string, string>();
-        rawAllOrders.forEach(order => {
-            if (order.productLine && order.productLine !== 'N/A') {
-                if (!map.has(order.mtm)) {
-                    map.set(order.mtm, order.productLine);
-                }
-            }
-        });
-        return map;
-    }, [rawAllOrders]);
-    
-    // FIX: Explicitly type the return value of useMemo to ensure correct downstream type inference.
     const allOrders: Order[] = useMemo(() => {
-        return rawAllOrders
-            .filter(order => order.productLine !== 'Backpack' && order.productLine !== 'Mouse')
-            .map(order => ({
+        return rawAllOrders.map(order => ({
                 ...order,
                 segment: mtmToSegmentMap.get(order.mtm) || 'N/A'
             }));
     }, [rawAllOrders, mtmToSegmentMap]);
 
-    // FIX: Augment sales data with product lines from the order data.
-    // FIX: Explicitly type the return value of useMemo to ensure correct downstream type inference.
-    const allSales: Sale[] = useMemo(() => {
-        return rawAllSales.map(sale => ({
-            ...sale,
-            productLine: mtmToProductLineMap.get(sale.lenovoProductNumber) || 'N/A'
-        }));
-    }, [rawAllSales, mtmToProductLineMap]);
+    const allSales = rawAllSales;
     
     const allInvoicesCount = useMemo(() => new Set(allSales.map(s => s.invoiceNumber)).size, [allSales]);
     
@@ -264,7 +242,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (item.fullSerializedString) serialToSerializedItemMap.set(item.fullSerializedString.toUpperCase(), item);
         });
 
-        // FIX: Explicitly type the order parameter to fix downstream type inference issues.
         const soMtmToOrderMap = new Map(allOrders.map((order: Order) => [`${order.salesOrder}-${order.mtm}`, order]));
         
         const shipmentCostMap = new Map<string, number>();
@@ -393,10 +370,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { reconciledSales: sales, profitabilityKpiData: finalKpis };
     }, [allSales, allOrders, allSerializedItems, allRebateDetails, allRebateSales, allShipments, allBackpackCosts]);
 
-// FIX: Calculate global KPI data to provide in the context.
     const orderKpiData = useMemo((): OrderKpiData | undefined => {
         if (allOrders.length === 0) return undefined;
-        const kpiAccumulator = allOrders.reduce((acc, order) => {
+        const kpiAccumulator = allOrders.reduce((acc, order: Order) => {
             acc.totalOrders++; acc.totalUnits += order.qty; acc.totalLandingCostValue += order.landingCostUnitPrice * order.qty; acc.totalFobValue += order.orderValue; if (order.isDelayedProduction || order.isDelayedTransit) acc.delayedOrdersCount++; if (order.isAtRisk) acc.atRiskOrdersCount++; if (!order.actualArrival) { acc.openUnits += order.qty; acc.backlogValue += order.orderValue; }
             if (order.dateIssuePI && order.actualArrival) { const leadTime = (new Date(order.actualArrival).getTime() - new Date(order.dateIssuePI).getTime()) / (1000 * 60 * 60 * 24); if (leadTime >= 0) { acc.totalLeadTime += leadTime; acc.leadTimeOrderCount++; } }
             return acc;
@@ -419,8 +395,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     const salesKpiData = useMemo((): SalesKpiData | undefined => {
         if (allSales.length === 0) return undefined;
-        const uniqueInvoices = new Set(allSales.map(s => s.invoiceNumber));
-        const kpi = allSales.reduce((acc, sale) => {
+        const uniqueInvoices = new Set(allSales.map((s: Sale) => s.invoiceNumber));
+        const kpi = allSales.reduce((acc, sale: Sale) => {
             acc.totalRevenue += sale.totalRevenue;
             acc.totalUnits += sale.quantity;
             return acc;
@@ -429,7 +405,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         kpi.invoiceCount = uniqueInvoices.size;
         kpi.averageSalePricePerUnit = kpi.totalUnits > 0 ? kpi.totalRevenue / kpi.totalUnits : 0;
         kpi.averageRevenuePerInvoice = kpi.invoiceCount > 0 ? kpi.totalRevenue / kpi.invoiceCount : 0;
-        kpi.uniqueBuyersCount = new Set(allSales.map(s => s.buyerId)).size;
+        kpi.uniqueBuyersCount = new Set(allSales.map((s: Sale) => s.buyerId)).size;
         const totalProfit = reconciledSales.reduce((sum, sale) => sum + (sale.unitProfit || 0), 0);
         kpi.totalProfit = totalProfit;
         kpi.averageGrossMargin = kpi.totalRevenue > 0 ? (totalProfit / kpi.totalRevenue) * 100 : 0;
@@ -437,21 +413,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [allSales, reconciledSales]);
 
 
-    const availableFilterOptions = useMemo((): UnifiedFilterOptions => {
-        // FIX: Explicitly cast T[K] to string to satisfy Set constructor and other string methods.
+    const staticYears = useMemo(() => {
+        return [...new Set([...allOrders.map(o => o.dateIssuePI ? new Date(o.dateIssuePI).getUTCFullYear() : null), ...allSales.map(s => s.invoiceDate ? new Date(s.invoiceDate).getUTCFullYear() : null)])]
+        .filter((y): y is number => y !== null).sort((a, b) => b - a).map(String);
+    }, [allOrders, allSales]);
+
+    const orderFilterOptions = useMemo((): FilterOptions => {
         const getUniqueSorted = <T, K extends keyof T>(data: T[], key: K): string[] =>
             [...new Set(data.map(item => String(item[key] ?? '')))].filter(val => val && val !== 'N/A').sort();
 
-        const staticYears = [...new Set([...allOrders.map(o => o.dateIssuePI ? new Date(o.dateIssuePI).getUTCFullYear() : null), ...allSales.map(s => s.invoiceDate ? new Date(s.invoiceDate).getUTCFullYear() : null)])]
-            .filter((y): y is number => y !== null).sort((a, b) => b - a).map(String);
-            
-        const staticSalesQuarters = [...new Set(allSales.map(s => {
-            if (!s.invoiceDate) return null;
-            const month = new Date(s.invoiceDate).getUTCMonth();
-            return `Q${Math.floor(month / 3) + 1}`;
-        }).filter((q): q is string => q !== null))].sort();
-
-        // FIX: Calculate quarters for orders to match the FilterOptions type
         const staticOrderQuarters = [...new Set(allOrders.map(o => {
             if (!o.dateIssuePI) return null;
             const month = new Date(o.dateIssuePI).getUTCMonth();
@@ -459,23 +429,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }).filter((q): q is string => q !== null))].sort();
 
         return {
-            orders: {
-                productLines: getUniqueSorted(allOrders, 'productLine'),
-                mtms: getUniqueSorted(allOrders, 'mtm'),
-                factoryToSgps: getUniqueSorted(allOrders, 'factoryToSgp'),
-                statuses: getUniqueSorted(allOrders, 'status'),
-                years: staticYears,
-                quarters: staticOrderQuarters,
-            },
-            sales: {
-                segments: getUniqueSorted(allSales, 'segment'),
-                buyers: getUniqueSorted(allSales, 'buyerName'),
-                quarters: staticSalesQuarters,
-                years: staticYears,
-            }
+            mtms: getUniqueSorted(allOrders, 'mtm'),
+            factoryToSgps: getUniqueSorted(allOrders, 'factoryToSgp'),
+            statuses: getUniqueSorted(allOrders, 'status'),
+            years: staticYears,
+            quarters: staticOrderQuarters,
         };
-    }, [allOrders, allSales]);
+    }, [allOrders, staticYears]);
 
+    const salesFilterOptions = useMemo((): SaleFilterOptions => {
+        const getUniqueSorted = <T, K extends keyof T>(data: T[], key: K): string[] =>
+            [...new Set(data.map(item => String(item[key] ?? '')))].filter(val => val && val !== 'N/A').sort();
+            
+        const staticSalesQuarters = [...new Set(allSales.map(s => {
+            if (!s.invoiceDate) return null;
+            const month = new Date(s.invoiceDate).getUTCMonth();
+            return `Q${Math.floor(month / 3) + 1}`;
+        }).filter((q): q is string => q !== null))].sort();
+
+        return {
+            segments: getUniqueSorted(allSales, 'segment'),
+            buyers: getUniqueSorted(allSales, 'buyerName'),
+            quarters: staticSalesQuarters,
+            years: staticYears,
+        };
+    }, [allSales, staticYears]);
+    
     const orderInfoMap = useMemo(() => {
         const map = new Map<string, { modelName: string }>();
         allOrders.forEach(order => {
@@ -494,13 +473,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
         // 1. Process shipments from the 'Shipments' sheet (SG > KH)
         const sgToKhGroups = (() => {
-            const groups = allShipments.reduce((acc, shipment) => {
+            const groups = allShipments.reduce((acc: Record<string, Shipment[]>, shipment) => {
                 if (!acc[shipment.packingList]) acc[shipment.packingList] = [];
                 acc[shipment.packingList].push(shipment);
                 return acc;
             }, {} as Record<string, Shipment[]>);
 
-            return Object.entries(groups).map(([packingList, items]): AugmentedShipmentGroup => {
+            return Object.entries(groups).map(([packingList, items]: [string, Shipment[]]): AugmentedShipmentGroup => {
                 const firstItem = items[0];
                 const { packingListDate, eta, arrivalDate } = firstItem;
                 const today = new Date(); today.setUTCHours(0, 0, 0, 0);
@@ -719,7 +698,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         const promotionCandidates: PromotionCandidate[] = analyzePromotionCandidates(inventory);
 
-        // FIX: Use the specific accumulator type to ensure `customer` is typed correctly.
         const customersById = allSales.reduce<Record<string, CustomerAccumulator>>((acc, sale) => {
             if (!acc[sale.buyerId]) {
                 acc[sale.buyerId] = {
@@ -737,7 +715,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (!customer.firstPurchaseDate || sale.invoiceDate < customer.firstPurchaseDate) customer.firstPurchaseDate = sale.invoiceDate;
             }
             return acc;
-        }, {});
+        }, {} as Record<string, CustomerAccumulator>);
 
         const ninetyDaysAgo = new Date(today.getTime());
         ninetyDaysAgo.setUTCDate(today.getUTCDate() - 90);
@@ -839,7 +817,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         rebateKpiData,
         allRebateDetails,
         allRebateSales,
-        availableFilterOptions,
+        orderFilterOptions,
+        salesFilterOptions,
         reconciledSales,
         profitabilityKpiData,
     };

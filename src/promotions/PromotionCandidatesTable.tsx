@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { GoogleGenAI, Type } from "@google/genai";
 import type { PromotionCandidate, PromotionPlan } from '../../types';
 import { ChevronUpIcon, ChevronDownIcon, SparklesIcon, DocumentMagnifyingGlassIcon, ExclamationTriangleIcon, LightBulbIcon, TruckIcon, ChevronRightIcon } from '../ui/Icons';
 import PromotionPlanDetail from './PromotionPlanDetail';

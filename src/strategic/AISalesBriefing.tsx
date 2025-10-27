@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// @google/genai-sdk fix: Updated import from "@google/ai" to "@google/genai" to use the correct library.
 import { GoogleGenAI, Type } from "@google/genai";
 import { SparklesIcon, ExclamationTriangleIcon, LightBulbIcon, BullseyeIcon, UserGroupIcon, CheckIcon, DocumentDuplicateIcon } from '../ui/Icons';
 import type { CustomerSalesOpportunity, AISalesBriefingData, TopOpportunity, CustomerTier } from '../../types';
@@ -37,7 +36,7 @@ const AISalesBriefing: React.FC<AISalesBriefingProps> = ({ customerOpportunities
             .join('\n');
 
         return `
-You are a top-tier sales strategist for a Lenovo electronics retailer. Your task is to analyze a list of sales opportunities and generate a high-level strategic sales briefing for the sales director. The goal is to provide actionable insights to maximize revenue from surplus stock.
+You are a top-tier sales strategist for a Lenovo electronics retailer in Cambodia. Your task is to analyze a list of sales opportunities and generate a high-level strategic sales briefing for the sales director. The goal is to provide actionable insights to maximize revenue from surplus stock.
 
 **Input Data: Customer Opportunities (Customer, Tier, Opportunity Score, Potential Value, # of Products)**
 ${opportunitiesString}
@@ -70,7 +69,6 @@ Generate a JSON object that strictly adheres to the provided schema. The analysi
                             type: Type.OBJECT,
                             properties: {
                                 customerName: { type: Type.STRING },
-                                // @google/genai-sdk fix: Removed unsupported 'enum' property from the response schema.
                                 customerTier: { type: Type.STRING },
                                 modelName: { type: Type.STRING },
                                 mtm: { type: Type.STRING },
@@ -90,7 +88,6 @@ Generate a JSON object that strictly adheres to the provided schema. The analysi
                 config: { temperature: 0.7, responseMimeType: "application/json", responseSchema: schema }
             });
             
-            // @google/genai-sdk fix: Access text output correctly from the response object.
             setBriefing(JSON.parse(response.text));
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
@@ -178,8 +175,8 @@ ${briefing.recommendedTactic}
             
             {briefing && (
                 <div className="mt-4 pt-4 border-t border-indigo-200 flex justify-end gap-x-2">
-                    <button onClick={handleCopy} className="inline-flex items-center px-2.5 py-1 border border-transparent text-xs font-medium rounded-md shadow-sm text-indigo-700 bg-indigo-100 hover:bg-indigo-200"><DocumentDuplicateIcon className="h-4 w-4 mr-1.5"/>{copyStatus === 'copied' ? 'Copied' : 'Copy Briefing'}</button>
-                    <button onClick={handleGenerate} disabled={isLoading} className="inline-flex items-center px-2.5 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">{isLoading ? '...' : 'Regenerate'}</button>
+                     <button onClick={handleCopy} className="inline-flex items-center px-2.5 py-1 border border-transparent text-xs font-medium rounded-md shadow-sm text-indigo-700 bg-indigo-100 hover:bg-indigo-200"><DocumentDuplicateIcon className="h-4 w-4 mr-1.5"/>{copyStatus === 'copied' ? 'Copied' : 'Copy Briefing'}</button>
+                     <button onClick={handleGenerate} disabled={isLoading} className="inline-flex items-center px-2.5 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">{isLoading ? '...' : 'Regenerate'}</button>
                 </div>
             )}
         </div>

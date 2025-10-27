@@ -1,14 +1,11 @@
 
 
 
-
-
 export type OrderDateRangePreset = 'last30' | 'last90' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'thisYear' | 'all' | 'custom';
 export type SalesDateRangePreset = 'last30' | 'last90' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'thisYear' | 'all' | 'custom';
 
 
 export interface Order {
-  productLine: string;
   salesOrder: string;
   mtm: string;
   modelName: string;
@@ -31,7 +28,6 @@ export interface Order {
 }
 
 export interface FilterOptions {
-  productLines: string[];
   mtms: string[];
   factoryToSgps: string[];
   statuses: string[];
@@ -60,7 +56,6 @@ export interface Sale {
   unitPrice: number;
   totalRevenue: number;
   localCurrency: string;
-  productLine: string;
 }
 
 export interface SaleFilterOptions {
@@ -91,7 +86,6 @@ export type TaskSortDirection = 'asc' | 'desc';
 export interface LocalFiltersState {
     orderSearchTerm: string;
     orderShow: 'all' | 'overdue' | 'delayedProduction' | 'delayedTransit' | 'atRisk' | 'onSchedule';
-    orderProductLine: string[];
     orderFactoryStatus: string[];
     orderLocalStatus: string[];
     orderDateRangePreset: OrderDateRangePreset;
@@ -101,8 +95,6 @@ export interface LocalFiltersState {
     orderEndDate: string | null;
 
     salesSearchTerm: string;
-    // FIX: Added salesProductLine to enable filtering sales by product line.
-    salesProductLine: string[];
     salesSegment: string[];
     salesBuyer: string[];
     salesDateRangePreset: SalesDateRangePreset;
@@ -110,35 +102,37 @@ export interface LocalFiltersState {
     salesQuarter: string;
     salesStartDate: string | null;
     salesEndDate: string | null;
+    salesRevenueMin: number | null;
+    salesRevenueMax: number | null;
+    salesBuyerRegion: string;
     
     inventorySearchTerm: string;
-    inventoryProductLine: string;
     stockStatus: StockStatusFilter;
     customerSearchTerm: string;
     customerTier: CustomerTier[];
     customerStatus: 'all' | 'new' | 'atRisk' | 'active';
+    // Add customerMatrixQuadrant to filter customers by their matrix position (e.g., 'champions', 'atRisk') after clicking on the CustomerValueMatrix chart.
+    customerMatrixQuadrant: 'champions' | 'highSpenders' | 'loyal' | 'atRisk' | null;
     strategicSearchTerm: string;
     strategicCustomerTier: CustomerTier[];
     backorderSearchTerm: string;
     backorderPriority: 'all' | 'High' | 'Medium' | 'Low';
     promotionsSearchTerm: string;
     promotionsPriority: 'all' | PromotionCandidate['priority'];
-    promotionsProductLine: string;
+    // Add promotionsSegment to filter promotions by customer segment after clicking on the SegmentRevenueChart.
+    promotionsSegment: string | null;
     priceListSearchTerm: string;
-    priceListProductLine: string;
     priceListStockStatus: 'all' | 'inStock' | 'outOfStock' | 'lowStock';
     rebateSearchTerm: string;
     rebateStatus: 'all' | RebateProgram['status'];
     rebateUpdateStatus: string;
     shipmentSearchTerm: string;
-    shipmentStatus: ('Transit CN > SG' | 'Transit SG > KH' | 'Arrived' | 'Delayed')[];
+    shipmentStatus: ('Transit CN > SG' | 'Transit SG > KH' | 'Arrived' | 'Delayed' | 'Upcoming')[];
     profitReconSearchTerm: string;
     profitReconStatus: 'all' | ReconciledSale['status'] | 'Issues';
 
     // Order vs Sale Reconciliation Filters
     orderVsSaleSearchTerm: string;
-    orderVsSaleProductLine: string[];
-// FIX: Corrected case mismatch in 'orderVsSaleStatus' type. The status values for order vs. sale reconciliation are now capitalized ('Matched', 'Unsold') to match the data structure, resolving a type error that prevented filtering from working correctly.
     orderVsSaleStatus: 'all' | 'Matched' | 'Unsold';
     orderVsSaleSegment: string[];
     
@@ -147,7 +141,6 @@ export interface LocalFiltersState {
     taskStatus: TaskStatus[];
     taskSortBy: TaskSortOption;
     taskSortDir: TaskSortDirection;
-    // FIX: Add missing 'taskQuickFilter' property to support task filtering by presets like 'due this week'.
     taskQuickFilter: 'all' | 'dueThisWeek';
 }
 
@@ -162,8 +155,6 @@ export interface InventoryItemYearlyBreakdown {
 export interface InventoryItem {
     mtm: string;
     modelName: string;
-    productLine: string;
-    specification: string;
     totalShippedQty: number;
     totalSoldQty: number;
     totalArrivedQty: number;
@@ -257,7 +248,6 @@ export interface AISalesBriefingData {
 export interface BackorderRecommendation {
     mtm: string;
     modelName: string;
-    productLine: string;
     priority: 'High' | 'Medium' | 'Low';
     priorityScore: number;
     recentSalesUnits: number; // 90-day total
@@ -275,7 +265,6 @@ export interface BackorderRecommendation {
 // --- Promotions Planner Types ---
 export interface HistoricalHolidaySalesAnalysis {
     totalRevenue: number;
-    topProductLines: { name: string; revenue: number }[];
     topSegments: { name: string; revenue: number }[];
     dailySales: { date: string; revenue: number }[];
     surplusItems: { mtm: string; modelName: string; inStockQty: number; historicalSales: number }[];
@@ -314,8 +303,6 @@ export interface AnnualStrategy {
 export interface PromotionCandidate {
     mtm: string;
     modelName: string;
-    productLine: string;
-    specification: string;
     inStockQty: number;
     otwQty: number;
     inStockValue: number;
@@ -532,7 +519,6 @@ export interface AugmentedShipmentGroup {
     source?: 'shipment' | 'order';
 }
 
-// FIX: Added missing AccessoryCost type definition.
 // --- Accessory Cost Types ---
 export interface AccessoryCost {
   so: string;
@@ -573,23 +559,4 @@ export interface ProfitabilityKpiData {
     totalRebatesApplied: number;
     salesWithRebates: number;
     salesMissingCost: number;
-}
-
-
-// --- Unified Filter Options for Sidebar ---
-export interface UnifiedFilterOptions {
-    orders: {
-        productLines: string[];
-        mtms: string[];
-        factoryToSgps: string[];
-        statuses: string[];
-        years: string[];
-        quarters: string[];
-    },
-    sales: {
-        segments: string[];
-        buyers: string[];
-        years: string[];
-        quarters: string[];
-    }
 }

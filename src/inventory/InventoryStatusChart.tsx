@@ -1,6 +1,6 @@
-import React, { useMemo, useContext, useState } from 'react';
-import ReactApexChart from 'react-apexcharts';
-import type { ApexOptions } from 'apexcharts';
+import React, { useMemo, useContext } from 'react';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
 import type { InventoryItem } from '../../types';
 import { DocumentMagnifyingGlassIcon } from '../ui/Icons';
 import { ThemeContext } from '../../contexts/ThemeContext';
@@ -11,23 +11,27 @@ interface InventoryStatusChartProps {
     activeFilter: string | null;
 }
 
-// Map filter keys to colors
 const STATUS_COLORS: Record<string, string> = {
     healthy: '#16A34A',
     lowStock: '#F59E0B',
-    outOfStock: '#EF4444',
+    critical: '#EF4444',
+    outOfStock: '#9CA3AF',
     noSales: '#6B7280',
 };
 const MUTED_COLOR = '#D1D5DB';
 
-const InventoryStatusChart: React.FC<InventoryStatusChartProps> = ({ data, onFilterChange, activeFilter }) => {
+const InventoryStatusChart: React.FC<InventoryStatusChartProps> = React.memo(({ data, onFilterChange, activeFilter }) => {
     const themeContext = useContext(ThemeContext);
     const isDark = themeContext?.theme === 'dark';
+
+    const labelColor = isDark ? '#d4d4d8' : '#71717a';
+    const primaryTextColor = isDark ? '#f9fafb' : '#18181b';
 
     const chartData = useMemo(() => {
         const statusCounts = {
             healthy: 0,
             lowStock: 0,
+            critical: 0,
             outOfStock: 0,
             noSales: 0,
         };
@@ -37,6 +41,8 @@ const InventoryStatusChart: React.FC<InventoryStatusChartProps> = ({ data, onFil
                 statusCounts.outOfStock++;
             } else if (item.weeksOfInventory === null) {
                 statusCounts.noSales++;
+            } else if (item.weeksOfInventory < 4) {
+                statusCounts.critical++;
             } else if (item.weeksOfInventory <= 12) {
                 statusCounts.lowStock++;
             } else {
@@ -47,21 +53,15 @@ const InventoryStatusChart: React.FC<InventoryStatusChartProps> = ({ data, onFil
         return [
             { name: 'Healthy', value: statusCounts.healthy, filter: 'healthy' },
             { name: 'Low Stock', value: statusCounts.lowStock, filter: 'lowStock' },
+            { name: 'Critical', value: statusCounts.critical, filter: 'critical' },
             { name: 'Out of Stock', value: statusCounts.outOfStock, filter: 'outOfStock' },
             { name: 'No Recent Sales', value: statusCounts.noSales, filter: 'noSales' },
         ].filter(d => d.value > 0);
     }, [data]);
 
-    const chartColors = useMemo(() => {
-        if (!activeFilter) {
-            return chartData.map(d => STATUS_COLORS[d.filter]);
-        }
-        return chartData.map(d => d.filter === activeFilter ? STATUS_COLORS[d.filter] : MUTED_COLOR);
-    }, [activeFilter, chartData]);
-
     if (chartData.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center h-full min-h-[350px] text-secondary-text">
+            <div className="flex flex-col items-center justify-center h-full min-h-[350px] text-secondary-text p-4 text-center">
                 <DocumentMagnifyingGlassIcon className="h-10 w-10 mb-2" />
                 <p className="text-sm">No inventory data to display</p>
             </div>
@@ -70,101 +70,77 @@ const InventoryStatusChart: React.FC<InventoryStatusChartProps> = ({ data, onFil
     
     const totalValue = chartData.reduce((sum, item) => sum + item.value, 0);
 
-    const series = chartData.map(d => d.value);
-
-    const options: ApexOptions = useMemo(() => ({
-        chart: {
-            type: 'donut',
-            height: '100%',
-            fontFamily: 'Inter, sans-serif',
-            toolbar: { show: false },
-            events: {
-                dataPointSelection: (event, chartContext, config) => {
-                    const selectedFilter = chartData[config.dataPointIndex]?.filter;
-                    if (selectedFilter) {
-                        onFilterChange(activeFilter === selectedFilter ? null : selectedFilter);
-                    }
-                },
-            },
-        },
-        series,
-        labels: chartData.map(d => d.name),
-        colors: chartColors,
-        plotOptions: {
-            pie: {
-                expandOnClick: false,
-                stroke: {
-                    width: 3,
-                    colors: [isDark ? '#18181b' : '#FFFFFF'], // primary-bg color
-                },
-                donut: {
-                    size: '70%',
-                    labels: {
-                        show: true,
-                        // Configuration for the label of the hovered slice
-                        name: {
-                            show: true,
-                            offsetY: -10,
-                            fontSize: '1rem',
-                            color: '#71717a', // zinc-500
-                        },
-                        // Configuration for the value of the hovered slice
-                        value: {
-                            show: true,
-                            offsetY: 10,
-                            fontSize: '2rem',
-                            fontWeight: 'bold',
-                            color: isDark ? '#f9fafb' : '#18181b',
-                            formatter: (val) => Number(val).toLocaleString(),
-                        },
-                        // Configuration for the label in the center when not hovered
-                        total: {
-                            show: true,
-                            showAlways: true, // This is important
-                            label: 'Total SKUs',
-                            fontSize: '1rem',
-                            color: '#71717a',
-                            formatter: () => totalValue.toLocaleString(),
-                        },
-                    },
-                },
-            },
-        },
-        dataLabels: {
-            enabled: false,
+    const options: EChartsOption = useMemo(() => ({
+        tooltip: {
+            trigger: 'item',
+            formatter: (params: any) => `${params.name}: <strong>${params.value.toLocaleString()} SKUs</strong> (${params.percent}%)`,
+            backgroundColor: isDark ? 'rgba(39, 39, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: isDark ? '#3f3f46' : '#e4e4e7',
+            textStyle: { color: isDark ? '#f9fafb' : '#18181b' }
         },
         legend: {
             position: 'bottom',
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 500,
-            itemMargin: { horizontal: 5, vertical: 5 },
-            labels: { colors: isDark ? '#d4d4d8' : '#4B5563' }
+            textStyle: { color: labelColor, fontFamily: 'Inter, sans-serif', fontWeight: 500 },
+            itemGap: 10,
+            icon: 'circle',
         },
-        tooltip: {
-            y: {
-                formatter: (val) => `${val.toLocaleString()} SKUs`
-            }
-        },
-        states: {
-            hover: {
-                filter: { type: 'lighten', value: 0.05 } as any,
+        series: [{
+            type: 'pie',
+            radius: ['70%', '90%'],
+            avoidLabelOverlap: false,
+            label: {
+                show: true,
+                position: 'center',
+                formatter: () => `{total|Total SKUs}\n{value|${totalValue.toLocaleString()}}`,
+                rich: {
+                    total: { fontSize: 16, color: labelColor },
+                    value: { fontSize: 32, fontWeight: 'bold', color: primaryTextColor, padding: [5, 0] }
+                }
             },
-            active: {
-                filter: { type: 'none' },
-                allowMultipleDataPointsSelection: false,
+            emphasis: {
+                label: {
+                    show: true,
+                    formatter: (params: any) => `{name|${params.name}}\n{value|${Number(params.value).toLocaleString()}}`,
+                    rich: {
+                        name: { fontSize: 16, color: labelColor },
+                        value: { fontSize: 32, fontWeight: 'bold', color: primaryTextColor, padding: [5, 0] }
+                    }
+                }
+            },
+            data: chartData.map(d => ({
+                name: d.name,
+                value: d.value,
+                itemStyle: {
+                    color: !activeFilter || activeFilter === d.filter ? STATUS_COLORS[d.filter] : (isDark ? '#404040' : MUTED_COLOR),
+                    borderColor: isDark ? '#27272a' : '#FFFFFF',
+                    borderWidth: 3
+                }
+            }))
+        }]
+    }), [chartData, activeFilter, isDark, labelColor, primaryTextColor, totalValue]);
+    
+    const onEvents = {
+        'click': (params: any) => {
+            const selectedFilter = chartData.find(d => d.name === params.name)?.filter;
+            if (selectedFilter) {
+                onFilterChange(activeFilter === selectedFilter ? null : selectedFilter);
             }
-        },
-    }), [chartData, activeFilter, onFilterChange, isDark, chartColors, totalValue]);
+        }
+    };
 
     return (
-        <ReactApexChart
-            options={options}
-            series={series}
-            type="donut"
-            height="100%"
-            width="100%"
-        />
+        <div className="h-full w-full" aria-label="Inventory health status pie chart" role="figure" tabIndex={0}>
+            <ReactECharts
+                option={options}
+                style={{ height: '100%', width: '100%' }}
+                onEvents={onEvents}
+                notMerge={true}
+                lazyUpdate={true}
+            />
+        </div>
     );
-};
+});
+
+InventoryStatusChart.displayName = 'InventoryStatusChart';
 
 export default InventoryStatusChart;

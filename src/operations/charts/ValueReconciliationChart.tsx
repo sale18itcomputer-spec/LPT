@@ -1,7 +1,6 @@
-import React, { useMemo, useContext } from 'react';
-import ReactApexChart from 'react-apexcharts';
-import type { ApexOptions } from 'apexcharts';
-import Card from '../../ui/Card';
+import React, { useMemo, useContext, useRef, useEffect } from 'react';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
 import { DocumentMagnifyingGlassIcon } from '../../ui/Icons';
 import { ThemeContext } from '../../../contexts/ThemeContext';
 import type { Order, Sale } from '../../../types';
@@ -11,13 +10,20 @@ interface ChartProps {
     sales: Sale[];
 }
 
-const ValueReconciliationChart: React.FC<ChartProps> = ({ orders, sales }) => {
+const ValueReconciliationChart: React.FC<ChartProps> = React.memo(({ orders, sales }) => {
+    const chartRef = useRef<ReactECharts>(null);
     const themeContext = useContext(ThemeContext);
-    const { theme } = themeContext!;
-    const isDark = theme === 'dark';
+    const isDark = themeContext?.theme === 'dark';
 
     const labelColor = isDark ? '#d4d4d8' : '#4B5563';
     const gridBorderColor = isDark ? '#3f3f46' : '#E5E7EB';
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            chartRef.current?.getEchartsInstance().resize();
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
     
     const chartData = useMemo(() => {
         const aggregated = new Map<string, { orderValue: number, saleValue: number }>();
@@ -57,34 +63,28 @@ const ValueReconciliationChart: React.FC<ChartProps> = ({ orders, sales }) => {
 
     const isDense = chartData.categories.length > 12;
 
-    const options: ApexOptions = {
-        chart: { type: 'area', height: '100%', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-        dataLabels: { enabled: false },
-        stroke: { curve: 'smooth', width: 3 },
-        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: [0.5, 0.6], opacityTo: [0.0, 0.1], stops: [0, 100] } },
-        colors: ['#3B82F6', '#10B981'],
-        legend: { position: 'top', horizontalAlign: 'right', labels: { colors: labelColor } },
-        xaxis: { 
-            categories: chartData.categories, 
-            labels: { 
-                style: { colors: labelColor },
-                hideOverlappingLabels: true,
-                rotate: isDense ? -45 : 0,
-                rotateAlways: isDense,
-            }, 
-            axisBorder: { show: false }, 
-            axisTicks: { show: false } 
+    const options: EChartsOption = useMemo(() => ({
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: isDense ? '15%' : '5%',
+            containLabel: true,
         },
-        yaxis: { labels: { style: { colors: labelColor }, formatter: val => val.toLocaleString('en-US', { notation: 'compact' }) } },
-        grid: { borderColor: gridBorderColor, strokeDashArray: 4 },
+        legend: {
+            data: chartData.series.map(s => s.name),
+            top: 'top',
+            right: 'right',
+            textStyle: { color: labelColor },
+        },
         tooltip: {
-            theme: isDark ? 'dark' : 'light',
-            shared: true,
-            intersect: false,
-            custom: function({ series, dataPointIndex, w }) {
-                const category = w.globals.labels[dataPointIndex];
-                const orderValue = series[0][dataPointIndex];
-                const saleValue = series[1][dataPointIndex];
+            trigger: 'axis',
+            backgroundColor: isDark ? 'rgba(39, 39, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: isDark ? '#3f3f46' : '#e4e4e7',
+            textStyle: { color: isDark ? '#f9fafb' : '#18181b' },
+            formatter: (params: any) => {
+                const category = params[0].name;
+                const orderValue = params.find((p:any) => p.seriesName === 'Order Value (FOB)')?.value || 0;
+                const saleValue = params.find((p:any) => p.seriesName === 'Sale Revenue')?.value || 0;
                 const variance = saleValue - orderValue;
                 
                 const formattedOrderValue = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(orderValue);
@@ -94,7 +94,7 @@ const ValueReconciliationChart: React.FC<ChartProps> = ({ orders, sales }) => {
                 const varianceColor = variance >= 0 ? 'text-green-600' : 'text-red-600';
     
                 return `
-                  <div class="p-2 rounded-lg bg-secondary-bg dark:bg-dark-secondary-bg text-primary-text dark:text-dark-primary-text font-sans text-sm border border-border-color dark:border-dark-border-color shadow-lg">
+                  <div class="p-2 font-sans text-sm">
                     <div class="font-bold mb-1">${category}</div>
                     <div class="grid grid-cols-[auto,1fr] gap-x-4">
                         <span>Order Value:</span><span class="font-semibold text-right">${formattedOrderValue}</span>
@@ -106,13 +106,76 @@ const ValueReconciliationChart: React.FC<ChartProps> = ({ orders, sales }) => {
                 `;
             }
         },
-    };
+         dataZoom: [
+            {
+                type: 'slider',
+                show: isDense,
+                start: 0,
+                end: 100,
+                bottom: 10,
+                height: 20,
+                textStyle: { color: labelColor }
+            }
+        ],
+        xAxis: { 
+            type: 'category',
+            data: chartData.categories,
+            boundaryGap: false,
+            axisLabel: { color: labelColor, rotate: isDense ? -45 : 0 }, 
+            axisLine: { show: false }, 
+            axisTick: { show: false } 
+        },
+        yAxis: { 
+            type: 'value',
+            axisLabel: { color: labelColor, formatter: (val: number) => new Intl.NumberFormat('en-US', { notation: 'compact' }).format(val) },
+            splitLine: { lineStyle: { color: gridBorderColor, type: 'dashed' } }
+        },
+        series: [
+            {
+                name: 'Order Value (FOB)',
+                data: chartData.series[0].data,
+                type: 'line',
+                smooth: true,
+                showSymbol: false,
+                lineStyle: { width: 3 },
+                areaStyle: {
+                    color: {
+                        type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                        colorStops: [{ offset: 0, color: 'rgba(59, 130, 246, 0.5)' }, { offset: 1, color: 'rgba(59, 130, 246, 0.0)' }]
+                    }
+                },
+            },
+            {
+                name: 'Sale Revenue',
+                data: chartData.series[1].data,
+                type: 'line',
+                smooth: true,
+                showSymbol: false,
+                lineStyle: { width: 3 },
+                 areaStyle: {
+                    color: {
+                        type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                        colorStops: [{ offset: 0, color: 'rgba(16, 185, 129, 0.6)' }, { offset: 1, color: 'rgba(16, 185, 129, 0.1)' }]
+                    }
+                },
+            }
+        ],
+        color: ['#3B82F6', '#10B981'],
+    }), [chartData, isDark, isDense, labelColor, gridBorderColor]);
 
     return (
-        <div className="h-full">
-            <ReactApexChart options={options} series={chartData.series} type="area" height="100%" />
+        <div className="h-full" aria-label="Monthly order value vs sale revenue trend chart" role="figure" tabIndex={0}>
+            <ReactECharts
+                ref={chartRef}
+                option={options}
+                style={{ height: '100%', width: '100%' }}
+                notMerge={true}
+                lazyUpdate={true}
+            />
         </div>
     );
-};
+});
+
+ValueReconciliationChart.displayName = 'ValueReconciliationChart';
 
 export default ValueReconciliationChart;

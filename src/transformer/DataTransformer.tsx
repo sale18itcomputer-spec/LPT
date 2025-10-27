@@ -12,7 +12,6 @@ import {
 } from '../../utils/transformer';
 import type { TransformedData } from '../../types';
 import Card from '../ui/Card';
-// FIX: Replace ArrowRightIcon with ArrowLongRightIcon
 import { ArrowLongRightIcon, CpuChipIcon, TableCellsIcon, ArrowDownTrayIcon, ClipboardDocumentListIcon, DocumentMagnifyingGlassIcon, SparklesIcon } from '../ui/Icons';
 import { exportDataToCsv } from '../../utils/csv';
 
@@ -236,7 +235,6 @@ const DataTransformer: React.FC = () => {
 
     const handleGeneratePivot = useCallback(() => {
         if (transformedData.length === 0) return;
-        // FIX: Explicitly type `grouped` to fix type inference issue.
         const grouped: Record<string, TransformedData[]> = transformedData.reduce((acc: Record<string, TransformedData[]>, row) => {
             const key = String(row[pivotConfig.groupBy as keyof TransformedData]);
             if (!acc[key]) acc[key] = [];
@@ -313,7 +311,8 @@ const DataTransformer: React.FC = () => {
                                     
                                     <div className="flex flex-wrap items-center gap-4 mb-4">
                                         <button onClick={handlePasteFromClipboard} className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg hover:bg-gray-100 dark:hover:bg-dark-primary-bg transition-colors">
-                                            <ClipboardDocumentListIcon className="h-4 w-4" /> Paste from Clipboard
+                                            <ClipboardDocumentListIcon className="h-4 w-4" />
+                                            Paste from Clipboard
                                         </button>
                                         
                                         <motion.button onClick={handleTransform} disabled={isLoading || !hasInputData} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="px-5 py-2 text-sm text-white font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-x-2 btn-gradient shadow-md">

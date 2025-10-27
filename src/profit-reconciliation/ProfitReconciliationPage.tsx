@@ -1,8 +1,10 @@
 
+
 import React, { useState, useMemo, Fragment, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../contexts/DataContext';
 import Card from '../ui/Card';
+import KpiCard from '../ui/KpiCard';
 import { ReconciledSale, LocalFiltersState } from '../../types';
 import { BanknotesIcon, ChartBarIcon, TrophyIcon, DocumentMagnifyingGlassIcon, ChevronUpIcon, ChevronDownIcon, CheckCircleIcon, ExclamationTriangleIcon, LinkIcon, XCircleIcon, QuestionMarkCircleIcon, ChevronRightIcon, ArrowLeftIcon } from '../ui/Icons';
 import AnimatedCounter from '../ui/AnimatedCounter';
@@ -224,7 +226,8 @@ const ProfitReconciliationPage: React.FC<ProfitReconciliationPageProps> = ({ loc
     const averageMargin = kpis.totalRevenue > 0 ? (kpis.totalProfit / kpis.totalRevenue) * 100 : 0;
 
     const invoiceGroups: AugmentedInvoiceGroup[] = useMemo(() => {
-        const grouped = filteredData.reduce<Record<string, ReconciledSale[]>>((acc, sale) => {
+        // FIX: Explicitly type `grouped` accumulator to fix type inference issue.
+        const grouped = filteredData.reduce<Record<string, ReconciledSale[]>>((acc, sale: ReconciledSale) => {
             const key = sale.invoiceNumber;
             if (!acc[key]) acc[key] = [];
             acc[key].push(sale);

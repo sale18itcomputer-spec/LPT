@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { LocalFiltersState } from '../../types';
 import { TruckIcon, CheckBadgeIcon, GlobeAltIcon, ExclamationTriangleIcon } from '../ui/Icons';
 
@@ -22,17 +22,20 @@ const filterOptions: {
 
 const ShipmentFilters: React.FC<ShipmentFiltersProps> = ({ localFilters, setLocalFilters }) => {
 
-  const handleFilterChange = <K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
-    setLocalFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
+    setLocalFilters(prev => {
+        if (JSON.stringify(prev[key]) === JSON.stringify(value)) return prev;
+        return { ...prev, [key]: value };
+    });
+  }, [setLocalFilters]);
   
-  const toggleStatusFilter = (status: ShipmentStatusType) => {
+  const toggleStatusFilter = useCallback((status: ShipmentStatusType) => {
       const currentStatuses = localFilters.shipmentStatus;
       const newStatuses = currentStatuses.includes(status)
           ? currentStatuses.filter(s => s !== status)
           : [...currentStatuses, status];
       handleFilterChange('shipmentStatus', newStatuses);
-  }
+  }, [localFilters.shipmentStatus, handleFilterChange]);
 
   const isAllActive = localFilters.shipmentStatus.length === 0;
 

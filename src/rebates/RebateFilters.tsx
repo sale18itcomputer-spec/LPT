@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import type { LocalFiltersState, RebateProgram } from '../../types';
 import Select from '../ui/Select';
 import { GlobeAltIcon, CheckCircleIcon, XCircleIcon } from '../ui/Icons';
@@ -18,9 +18,12 @@ const statusOptions: { label: string; value: 'all' | RebateProgram['status']; ic
 const RebateFilters: React.FC<RebateFiltersProps> = ({ localFilters, setLocalFilters }) => {
   const { allRebates } = useData();
 
-  const handleFilterChange = <K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
-    setLocalFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
+    setLocalFilters(prev => {
+        if (prev[key] === value) return prev;
+        return { ...prev, [key]: value };
+    });
+  }, [setLocalFilters]);
 
   const updateStatusOptions = useMemo(() => {
       return [...new Set(allRebates.map(r => r.update))].sort();

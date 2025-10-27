@@ -1,7 +1,5 @@
 
 
-
-
 import type { LocalFiltersState, OrderDateRangePreset, SalesDateRangePreset, TaskSortDirection, TaskSortOption } from './types';
 
 // --- SOURCE DATA SHEETS ---
@@ -89,11 +87,9 @@ export const TASKS_SHEET_NAME = 'Tasks';
 
 
 // --- APP CONSTANTS ---
-// FIX: Changed type from Omit<LocalFiltersState, 'taskQuickFilter'> to LocalFiltersState and added the missing property.
 export const INITIAL_LOCAL_FILTERS: LocalFiltersState = {
     orderSearchTerm: '',
     orderShow: 'all',
-    orderProductLine: [],
     orderFactoryStatus: [],
     orderLocalStatus: [],
     orderDateRangePreset: 'thisYear' as OrderDateRangePreset,
@@ -103,8 +99,6 @@ export const INITIAL_LOCAL_FILTERS: LocalFiltersState = {
     orderEndDate: null,
 
     salesSearchTerm: '',
-    // FIX: Added salesProductLine to the initial filter state.
-    salesProductLine: [],
     salesSegment: [],
     salesBuyer: [],
     salesDateRangePreset: 'thisYear' as SalesDateRangePreset,
@@ -112,22 +106,24 @@ export const INITIAL_LOCAL_FILTERS: LocalFiltersState = {
     salesQuarter: 'all',
     salesStartDate: null,
     salesEndDate: null,
+    salesRevenueMin: null,
+    salesRevenueMax: null,
+    salesBuyerRegion: '',
     
     inventorySearchTerm: '',
-    inventoryProductLine: 'all',
     stockStatus: 'all',
     customerSearchTerm: '',
     customerTier: [],
     customerStatus: 'all',
+    customerMatrixQuadrant: null,
     strategicSearchTerm: '',
     strategicCustomerTier: [],
     backorderSearchTerm: '',
     backorderPriority: 'all',
     promotionsSearchTerm: '',
     promotionsPriority: 'all',
-    promotionsProductLine: 'all',
+    promotionsSegment: null,
     priceListSearchTerm: '',
-    priceListProductLine: 'all',
     priceListStockStatus: 'all',
     rebateSearchTerm: '',
     rebateStatus: 'all',
@@ -139,7 +135,6 @@ export const INITIAL_LOCAL_FILTERS: LocalFiltersState = {
 
     // Order vs Sale Reconciliation Filters
     orderVsSaleSearchTerm: '',
-    orderVsSaleProductLine: [],
     orderVsSaleStatus: 'all',
     orderVsSaleSegment: [],
     

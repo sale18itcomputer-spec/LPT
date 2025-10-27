@@ -8,7 +8,7 @@ import { AccessoryCost } from '../../types';
 import { BanknotesIcon, CubeIcon, DocumentMagnifyingGlassIcon, ChevronUpIcon, ChevronDownIcon, ChevronRightIcon } from '../ui/Icons';
 
 // Types
-type AugmentedAccessoryItem = AccessoryCost & { modelName: string; productLine: string; qty: number; totalCost: number; };
+type AugmentedAccessoryItem = AccessoryCost & { modelName: string; qty: number; totalCost: number; };
 interface AugmentedAccessoryGroup {
     so: string;
     items: AugmentedAccessoryItem[];
@@ -46,14 +46,14 @@ const AccessoryCostsPage: React.FC = () => {
     const [itemsPerPage, setItemsPerPage] = useState(15);
 
     const orderInfoMap = useMemo(() => {
-        const map = new Map<string, { modelName: string; productLine: string; qty: number }>();
+        const map = new Map<string, { modelName: string; qty: number }>();
         allOrders.forEach(order => {
             const key = `${order.salesOrder}-${order.mtm}`;
             if (map.has(key)) {
                 const existing = map.get(key)!;
                 existing.qty += order.qty;
             } else {
-                map.set(key, { modelName: order.modelName, productLine: order.productLine, qty: order.qty });
+                map.set(key, { modelName: order.modelName, qty: order.qty });
             }
         });
         return map;
@@ -66,7 +66,6 @@ const AccessoryCostsPage: React.FC = () => {
             return {
                 ...item,
                 modelName: orderInfo?.modelName || 'Unknown Model',
-                productLine: orderInfo?.productLine || 'N/A',
                 qty: qty,
                 totalCost: item.backpackCost * qty,
             };

@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useTasks } from '../../contexts/TasksContext';
@@ -11,7 +13,7 @@ import {
     PlusIcon,
     CheckIcon
 } from '../ui/Icons';
-import { Spinner } from '../ui/Spinner';
+import TasksSkeleton from './TasksSkeleton';
 import { columnHeaderConfig } from './taskConstants';
 
 const isDueThisWeek = (dateString: string | null | undefined): boolean => {
@@ -61,7 +63,6 @@ const TasksDashboard: React.FC<TasksDashboardProps> = ({ localFilters, setSideba
     const filteredAndSortedTasks = useMemo(() => {
         let filtered = [...tasks];
 
-        // FIX: Destructure taskQuickFilter directly as it's part of LocalFiltersState
         const { taskSearchTerm, taskStatus, taskSortBy, taskSortDir, taskQuickFilter } = localFilters;
         
         if (taskQuickFilter === 'dueThisWeek') {
@@ -210,7 +211,7 @@ const TasksDashboard: React.FC<TasksDashboardProps> = ({ localFilters, setSideba
         setPlaceholderIndex(null);
     };
 
-    if (isLoading) return <div className="h-full flex items-center justify-center"><Spinner /></div>;
+    if (isLoading) return <TasksSkeleton />;
     if (error) return <div className="h-full flex items-center justify-center p-4"><div className="flex items-start bg-red-50 text-red-700 p-4 rounded-lg"><ExclamationTriangleIcon className="h-6 w-6 mr-3" /><p>{error}</p></div></div>;
 
     return (

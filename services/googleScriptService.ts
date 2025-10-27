@@ -1,3 +1,4 @@
+import Papa from 'papaparse';
 import type { Order, OrderDataResponse, FilterOptions, Sale, SaleDataResponse, SaleFilterOptions, AuthUser, PriceListItem, SerializedItem, RebateProgram, RebateDetail, RebateSale, Shipment, AccessoryCost, Task, TaskStatus, TaskPriority } from '../types';
 import { 
     ORDER_SHEET_URL, SALE_SHEET_URL, AUTH_SHEET_URL, PRICE_LIST_SHEET_URL, SERIALIZATION_SHEET_URL, REBATE_SHEET_URL, REBATE_DETAIL_SHEET_URL, REBATE_SALES_SHEET_URL, SHIPMENT_SHEET_URL, BACKPACK_COST_SHEET_URL,
@@ -29,6 +30,12 @@ function safeParseDate(dateString: string | undefined): Date | null {
     if (!dateString || typeof dateString !== 'string' || dateString.trim() === '') return null;
     
     const dateOnlyString = dateString.trim().split('T')[0];
+
+    // Early return for known non-date values (silently)
+    const nonDateValues = ['on the way', 'pending', 'n/a', 'tbd', 'unknown'];
+    if (nonDateValues.includes(dateOnlyString.toLowerCase())) {
+        return null;
+    }
 
     // 1. Try YYYY-MM-DD format (ISO)
     let match = dateOnlyString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
@@ -69,55 +76,48 @@ function safeParseDate(dateString: string | undefined): Date | null {
         }
     }
 
-    // No fallback to `new Date()` to avoid ambiguity and timezone issues.
-    console.warn(`Could not parse date with any known format: "${dateString}"`);
+    // Only warn for values that look like they should be dates but failed to parse
+    // (contains numbers, slashes, or dashes)
+    if (/[\d\-\/]/.test(dateOnlyString)) {
+        console.warn(`Could not parse date with any known format: "${dateString}"`);
+    }
+    
     return null;
 };
 
 
 /**
- * A robust CSV parser that handles quoted fields containing commas and escaped quotes ("").
- * It now correctly parses the header row with the same logic as data rows.
+ * A robust CSV parser that uses Papaparse to handle various CSV complexities.
  * @param csvText The raw CSV string data.
  * @returns An array of objects, where each object represents a row.
  */
 const parseCSV = (csvText: string): Record<string, string>[] => {
-  const lines = csvText.replace(/\r/g, '').trim().split('\n');
-  if (lines.length < 2) return [];
+  const result = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: header => header.trim(),
+    transform: (value) => value.trim(),
+  });
+
+  if (result.errors && result.errors.length > 0) {
+    console.warn("Papaparse encountered errors:", result.errors);
+  }
   
-  lines[0] = lines[0].replace(/^\uFEFF/, '');
-
-  // Regex to handle quoted fields with commas and escaped quotes
-  const regex = /(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)/g;
-
-  const parseLine = (line: string): string[] => {
-    const values: string[] = [];
-    let match;
-    regex.lastIndex = 0; // Reset regex state for each new line
-    while ((match = regex.exec(line))) {
-      let value = match[1];
-      if (value.startsWith('"') && value.endsWith('"')) {
-        // Unescape double quotes ("") and remove the surrounding quotes
-        value = value.slice(1, -1).replace(/""/g, '"');
-      }
-      values.push(value.trim());
-    }
-    return values;
+  if (!result.data) {
+    return [];
   }
 
-  const headers = parseLine(lines[0]);
-
-  return lines.slice(1).map(line => {
-    if (!line.trim()) return null; // Skip empty lines in the CSV
-
-    const values = parseLine(line);
-
-    const rowObject: Record<string, string> = {};
-    headers.forEach((header, i) => {
-      rowObject[header] = values[i] || '';
-    });
-    return rowObject;
-  }).filter(row => row !== null) as Record<string, string>[];
+  // Papaparse returns data as an array of objects, but values might not be strings.
+  // The processing functions expect strings, so we ensure that.
+  // The `row` parameter from `result.data.map` is inferred as `unknown`, which cannot be iterated over.
+  // By explicitly typing `row` as `any`, we can use `for...in` and access its properties.
+  return result.data.map((row: any) => {
+    const stringRow: Record<string, string> = {};
+    for (const key in row) {
+      stringRow[key] = String(row[key] ?? '');
+    }
+    return stringRow;
+  }) as Record<string, string>[];
 };
 
 
@@ -164,7 +164,6 @@ const processOrderData = (rawData: Record<string, string>[]): OrderDataResponse 
         const isAtRisk = isActionable && !hasLeftFactory && !isDelayedProduction && !!shipDate && shipDate <= today && !actualArrivalDate;
         
         return {
-          productLine: String(get('Product Line') || 'N/A').trim(),
           salesOrder: String(get('Sales Order Number') || 'N/A').trim(),
           mtm: String(get('Product ID') || 'N/A').trim(),
           modelName: String(get('Model Name') || 'N/A').trim(),
@@ -211,7 +210,6 @@ const processOrderData = (rawData: Record<string, string>[]): OrderDataResponse 
     )).sort();
 
     const filterOptions: FilterOptions = {
-      productLines: [...new Set(orders.map(o => o.productLine))].sort(),
       mtms: [...new Set(orders.map(o => o.mtm))].sort(),
       factoryToSgps: [...new Set(orders.map(o => o.factoryToSgp))].sort(),
       statuses: [...new Set(orders.map(o => o.status))].sort(),
@@ -254,7 +252,6 @@ const processSaleData = (rawData: Record<string, string>[]): SaleDataResponse =>
           unitPrice,
           totalRevenue,
           localCurrency: String(get('Local Currency') || 'N/A').trim(),
-          productLine: 'N/A',
         };
       })
       .filter(sale => sale.invoiceNumber && sale.invoiceNumber !== 'N/A' && sale.invoiceNumber !== '' && sale.serialNumber && sale.serialNumber !== 'N/A');
@@ -596,97 +593,13 @@ const processTaskData = (rawData: Record<string, string>[]): Task[] => {
     }).filter(task => task.id);
 };
 
-
 /**
- * Creates and runs a one-shot web worker to process CSV data off the main thread.
- * @param csvText The raw CSV string.
- * @param type The type of data to process ('orders', 'sales', etc.).
- * @returns A promise that resolves with the processed data.
+ * Fetches sheet data, then processes it on the main thread.
  */
-const createAndRunWorker = <T>(csvText: string, type: 'orders' | 'sales' | 'auth' | 'price-list' | 'serialization' | 'rebates' | 'rebate-details' | 'rebate-sales' | 'shipments' | 'backpack-costs'): Promise<T> => {
-    return new Promise((resolve, reject) => {
-        const workerLogic = `
-            const safeParseDate = ${safeParseDate.toString()};
-            const parseCSV = ${parseCSV.toString()};
-            const processOrderData = ${processOrderData.toString()};
-            const processSaleData = ${processSaleData.toString()};
-            const processAuthData = ${processAuthData.toString()};
-            const processPriceListData = ${processPriceListData.toString()};
-            const processSerializationData = ${processSerializationData.toString()};
-            const processRebateData = ${processRebateData.toString()};
-            const processRebateDetailData = ${processRebateDetailData.toString()};
-            const processRebateSaleData = ${processRebateSaleData.toString()};
-            const processShipmentData = ${processShipmentData.toString()};
-            const processBackpackCostData = ${processBackpackCostData.toString()};
-            const processTaskData = ${processTaskData.toString()};
-
-            self.onmessage = (event) => {
-                const { type, csvText } = event.data;
-                try {
-                    const rawData = parseCSV(csvText);
-                    let result;
-                    if (type === 'orders') {
-                        result = processOrderData(rawData);
-                    } else if (type === 'sales') {
-                        result = processSaleData(rawData);
-                    } else if (type === 'auth') {
-                        result = processAuthData(rawData);
-                    } else if (type === 'price-list') {
-                        result = processPriceListData(rawData);
-                    } else if (type === 'serialization') {
-                        result = processSerializationData(rawData);
-                    } else if (type === 'rebates') {
-                        result = processRebateData(rawData);
-                    } else if (type === 'rebate-details') {
-                        result = processRebateDetailData(rawData);
-                    } else if (type === 'rebate-sales') {
-                        result = processRebateSaleData(rawData);
-                    } else if (type === 'shipments') {
-                        result = processShipmentData(rawData);
-                    } else if (type === 'backpack-costs') {
-                        result = processBackpackCostData(rawData);
-                    } else {
-                        throw new Error('Unknown data type for worker');
-                    }
-                    self.postMessage({ success: true, data: result });
-                } catch (error) {
-                    self.postMessage({ success: false, error: error.message });
-                } finally {
-                    self.close();
-                }
-            };
-        `;
-
-        const blob = new Blob([workerLogic], { type: 'application/javascript' });
-        const workerUrl = URL.createObjectURL(blob);
-        const worker = new Worker(workerUrl);
-
-        worker.onmessage = (event) => {
-            URL.revokeObjectURL(workerUrl);
-            const { success, data, error } = event.data;
-            if (success) {
-                resolve(data as T);
-            } else {
-                reject(new Error(error));
-            }
-        };
-
-        worker.onerror = (error) => {
-            URL.revokeObjectURL(workerUrl);
-            reject(new Error(`Worker error: ${error.message}`));
-        };
-
-        worker.postMessage({ type, csvText });
-    });
-};
-
-/**
- * Fetches sheet data, then passes it to a worker for processing.
- */
-const fetchAndProcessData = async <T>(url: string, type: 'orders' | 'sales' | 'auth' | 'price-list' | 'serialization' | 'rebates' | 'rebate-details' | 'rebate-sales' | 'shipments' | 'backpack-costs'): Promise<T> => {
+const fetchAndProcessData = async <T>(url: string, type: 'orders' | 'sales' | 'auth' | 'price-list' | 'serialization' | 'rebates' | 'rebate-details' | 'rebate-sales' | 'shipments' | 'backpack-costs' | 'tasks'): Promise<T> => {
   const response = await fetch(url);
   if (!response.ok) {
-    if ((type === 'serialization') && response.status === 400) {
+    if ((type === 'serialization' || type === 'tasks') && response.status === 400) {
         const errorMsg = `Could not fetch ${type} data (HTTP 400). This is likely due to an invalid GID in the sheet URL in constants.ts. Please check the GID and update it.`;
         console.warn(errorMsg);
         throw new GidError(errorMsg);
@@ -694,7 +607,48 @@ const fetchAndProcessData = async <T>(url: string, type: 'orders' | 'sales' | 'a
     throw new Error(`Failed to fetch sheet data for ${type}: ${response.status} ${response.statusText}`);
   }
   const csvText = await response.text();
-  return createAndRunWorker<T>(csvText, type);
+  const rawData = parseCSV(csvText);
+
+  let result;
+  switch (type) {
+    case 'orders':
+      result = processOrderData(rawData);
+      break;
+    case 'sales':
+      result = processSaleData(rawData);
+      break;
+    case 'auth':
+      result = processAuthData(rawData);
+      break;
+    case 'price-list':
+      result = processPriceListData(rawData);
+      break;
+    case 'serialization':
+      result = processSerializationData(rawData);
+      break;
+    case 'rebates':
+      result = processRebateData(rawData);
+      break;
+    case 'rebate-details':
+      result = processRebateDetailData(rawData);
+      break;
+    case 'rebate-sales':
+      result = processRebateSaleData(rawData);
+      break;
+    case 'shipments':
+      result = processShipmentData(rawData);
+      break;
+    case 'backpack-costs':
+      result = processBackpackCostData(rawData);
+      break;
+    case 'tasks':
+      result = processTaskData(rawData);
+      break;
+    default:
+      throw new Error('Unknown data type for processing');
+  }
+
+  return result as T;
 };
 
 
@@ -860,11 +814,12 @@ export const forceRefreshBackpackCostData = (): Promise<AccessoryCost[]> => {
 
 // --- Task Data Functions ---
 /**
- * Retrieves task data from the public Google Sheet via Apps Script.
+ * Retrieves task data from the public Google Sheet.
  */
 export const getTasksData = async (): Promise<Task[]> => {
-  const rawData: any[] = await readSheetData({ sheetType: TASKS_SHEET_NAME });
-  return processTaskData(rawData);
+  const url = new URL(TASKS_SHEET_URL);
+  url.searchParams.set('_cacheBust', Date.now().toString());
+  return fetchAndProcessData<Task[]>(url.toString(), 'tasks');
 };
 
 

@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../contexts/DataContext';
 import Card from '../ui/Card';
 import { RebateSale, Sale } from '../../types';
-// FIX: Add missing icon import
 import { ExclamationTriangleIcon, ShieldCheckIcon, DocumentMagnifyingGlassIcon, CheckCircleIcon, CubeIcon, ChevronLeftIcon, ChevronRightIcon } from '../ui/Icons';
 import AnimatedCounter from '../ui/AnimatedCounter';
 import SegmentedControl from '../ui/SegmentedControl';
@@ -280,9 +279,9 @@ const RebateValidationPage: React.FC = () => {
                             )}
                             {mobileView === 'list' && (
                                 <motion.div key="list" custom={direction} variants={viewVariants} initial="enter" animate="center" exit="exit" transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }} className="absolute w-full">
-                                    <div className="pb-4 mb-4 border-b border-border-color">
+                                    <div className="pb-4 mb-4 border-b border-border-color dark:border-dark-border-color">
                                         <button onClick={handleBack} className="flex items-center text-sm font-medium text-highlight mb-2"><ChevronLeftIcon className="h-4 w-4 mr-1" /> Back to Summary</button>
-                                        <h2 className="text-xl font-bold">{selectedStatus}</h2>
+                                        <h2 className="text-xl font-bold text-primary-text">{selectedStatus}</h2>
                                     </div>
                                     <input type="text" placeholder="Search serials or MTMs..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="block w-full bg-secondary-bg border border-border-color rounded-md py-2 px-3 text-primary-text placeholder-secondary-text focus:outline-none focus:ring-2 focus:ring-highlight sm:text-sm mb-4" />
                                     <div className="space-y-3">

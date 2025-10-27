@@ -1,3 +1,5 @@
+
+
 import React from 'react';
 import { ArrowsPointingOutIcon } from './Icons';
 
@@ -12,7 +14,7 @@ interface ChartCardProps {
 
 const ChartCard = React.forwardRef<HTMLDivElement, ChartCardProps>(
   ({ children, title, description, controls, onExpand, className }, ref) => {
-    const baseClassName = "bg-secondary-bg dark:bg-dark-secondary-bg rounded-xl border border-border-color dark:border-dark-border-color flex flex-col shadow-sm";
+    const baseClassName = "bg-secondary-bg dark:bg-dark-secondary-bg rounded-xl border border-border-color dark:border-dark-border-color flex flex-col shadow-sm min-w-0";
     const combinedClassName = [baseClassName, className].filter(Boolean).join(' ');
 
     return (

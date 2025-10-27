@@ -1,4 +1,6 @@
-import React from 'react';
+
+
+import React, { useCallback } from 'react';
 import type { LocalFiltersState } from '../../../types';
 import MultiSelect from '../../ui/MultiSelect';
 import { GlobeAltIcon, CheckCircleIcon, ArchiveBoxIcon } from '../../ui/Icons';
@@ -16,11 +18,14 @@ const statusOptions: { label: string; value: LocalFiltersState['orderVsSaleStatu
 ];
 
 const OrderVsSaleFilters: React.FC<OrderVsSaleFiltersProps> = ({ localFilters, setLocalFilters }) => {
-  const { availableFilterOptions } = useData();
+  const { salesFilterOptions } = useData();
 
-  const handleFilterChange = <K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
-    setLocalFilters(prev => ({ ...prev, [key]: value }));
-  };
+  const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
+    setLocalFilters(prev => {
+        if (JSON.stringify(prev[key]) === JSON.stringify(value)) return prev;
+        return { ...prev, [key]: value };
+    });
+  }, [setLocalFilters]);
 
   return (
     <>
@@ -35,19 +40,10 @@ const OrderVsSaleFilters: React.FC<OrderVsSaleFiltersProps> = ({ localFilters, s
           className="block w-full bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1.5 px-3 text-primary-text dark:text-dark-primary-text placeholder-secondary-text dark:placeholder-dark-secondary-text focus:outline-none focus:ring-2 focus:ring-highlight sm:text-sm"
         />
       </div>
-      <div>
-        <MultiSelect
-          label="Product Line"
-          options={availableFilterOptions.orders.productLines}
-          selected={localFilters.orderVsSaleProductLine}
-          onChange={(v) => handleFilterChange('orderVsSaleProductLine', v)}
-          placeholder="Filter product lines..."
-        />
-      </div>
        <div>
         <MultiSelect
           label="Product Segment"
-          options={availableFilterOptions.sales.segments}
+          options={salesFilterOptions.segments}
           selected={localFilters.orderVsSaleSegment}
           onChange={(v) => handleFilterChange('orderVsSaleSegment', v)}
           placeholder="Filter segments..."

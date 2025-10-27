@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useCallback, Fragment, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePriceListData } from '../../hooks/usePriceListData';
@@ -15,7 +17,6 @@ import StockHealthBadge from './StockHealthBadge';
 import AIPricingModal from './AIPricingModal';
 import Sparkline from './Sparkline';
 import AnimatedCounter from '../ui/AnimatedCounter';
-import ProfitabilityChart from './ProfitabilityChart';
 
 // --- Type Definitions ---
 type PriceListItemWithId = PriceListItem & { _uniqueId: string };
@@ -24,9 +25,7 @@ export interface AugmentedMtmGroup {
     _uniqueId: string; // MTM
     mtm: string;
     modelName: string;
-    productLine: string;
     description: string;
-    specification: string;
     sdp: number;
     srp: number;
     // New fields from inventory
@@ -146,10 +145,11 @@ const KpiCard: React.FC<{ title: string; value: number; icon: React.FC<any>; for
 // --- Main Component ---
 interface PriceListPageProps {
     localFilters: LocalFiltersState;
+    setLocalFilters: React.Dispatch<React.SetStateAction<LocalFiltersState>>;
     userRole: string;
 }
 
-const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, userRole }) => {
+const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, setLocalFilters, userRole }) => {
     const { data, isLoading, error, refreshData, updateItem } = usePriceListData();
     const { allOrders, allSales, allSerializedItems, inventoryData, salesMetricsByMtm } = useData();
     const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'modelName', direction: 'asc' });
@@ -185,7 +185,6 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, userRole })
     }, [allSales]);
 
     const aggregatedData: AugmentedMtmGroup[] = useMemo(() => {
-        // FIX: Explicitly type the Map to ensure correct type inference.
         const inventoryMap = new Map<string, InventoryItem>(inventoryData.map(item => [item.mtm, item]));
 
         const onHandQtyMap = new Map<string, number>();
@@ -254,9 +253,7 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, userRole })
 
             return {
                 _uniqueId: mtm, mtm, modelName: firstItem.modelName,
-                productLine: inventoryItem?.productLine || 'N/A',
                 description: firstItem.description,
-                specification: inventoryItem?.specification || firstItem.description,
                 sdp, srp,
                 onHandQty: onHandQty,
                 otwQty: inventoryItem?.otwQty || 0,
@@ -309,7 +306,7 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, userRole })
     };
     
     const sortedAndFilteredData = useMemo(() => {
-        const { priceListSearchTerm, priceListProductLine, priceListStockStatus } = localFilters;
+        const { priceListSearchTerm, priceListStockStatus } = localFilters;
         let filteredData = [...aggregatedData];
         if (priceListSearchTerm) {
             const lower = priceListSearchTerm.toLowerCase();
@@ -321,10 +318,6 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, userRole })
             );
         }
         
-        if (priceListProductLine !== 'all') {
-            filteredData = filteredData.filter(item => item.productLine === priceListProductLine);
-        }
-
         if (priceListStockStatus !== 'all') {
             filteredData = filteredData.filter(item => {
                 const weeks = item.weeksOfInventory;
@@ -384,34 +377,6 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, userRole })
             totalListedMtms,
             totalUnitsInStock,
         };
-    }, [sortedAndFilteredData]);
-
-
-    const profitabilityChartData = useMemo(() => {
-        // FIX: Explicitly type accumulator to fix type inference issue.
-        const dataByProductLine = sortedAndFilteredData.reduce<Record<string, { totalSdpProfitValue: number; totalSdpRevenuePotential: number; count: number }>>((acc, item) => {
-            const pl = item.productLine || 'N/A';
-            if (!acc[pl]) {
-                acc[pl] = { totalSdpProfitValue: 0, totalSdpRevenuePotential: 0, count: 0 };
-            }
-            if (item.onHandQty > 0 && item.sdp > 0 && item.sdpProfit !== null) {
-                acc[pl].totalSdpProfitValue += item.sdpProfit * item.onHandQty;
-                acc[pl].totalSdpRevenuePotential += item.sdp * item.onHandQty;
-            }
-            acc[pl].count++;
-            return acc;
-        }, {});
-        
-        // FIX: Explicitly type the map parameter to fix destructuring issue.
-        return Object.entries(dataByProductLine)
-            .map(([name, { totalSdpProfitValue, totalSdpRevenuePotential, count }]: [string, { totalSdpProfitValue: number; totalSdpRevenuePotential: number; count: number }]) => ({
-                name,
-                margin: totalSdpRevenuePotential > 0 ? (totalSdpProfitValue / totalSdpRevenuePotential) * 100 : 0,
-                count
-            }))
-            .filter(d => d.margin > 0)
-            .sort((a, b) => b.margin - a.margin);
-
     }, [sortedAndFilteredData]);
 
     const RenderContent = () => {
@@ -623,7 +588,7 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, userRole })
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
-                                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text hover:bg-gray-50 dark:hover:bg-dark-primary-bg disabled:opacity-50 transition-colors"
+                                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text hover:bg-gray-100 dark:hover:bg-dark-primary-bg disabled:opacity-50 transition-colors"
                                 >
                                     Next
                                 </button>
@@ -652,16 +617,11 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, userRole })
                 </div>
 
                 {userRole === 'Admin' ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <KpiCard title="Total Inventory Value" value={priceListKpis.totalInventoryValue} icon={BanknotesIcon} formatter={fullCurrencyFormatter} />
-                                <KpiCard title="Weighted Avg. SDP Margin" value={priceListKpis.weightedAvgSdpMargin} icon={ChartBarIcon} formatter={(v) => `${v.toFixed(1)}%`} />
-                            </div>
-                        </div>
-                        <div className="h-[350px]">
-                            <ProfitabilityChart data={profitabilityChartData} />
-                        </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <KpiCard title="Total Inventory Value" value={priceListKpis.totalInventoryValue} icon={BanknotesIcon} formatter={fullCurrencyFormatter} />
+                        <KpiCard title="Weighted Avg. SDP Margin" value={priceListKpis.weightedAvgSdpMargin} icon={ChartBarIcon} formatter={(v) => `${v.toFixed(1)}%`} />
+                        <KpiCard title="Listed MTMs" value={priceListKpis.totalListedMtms} icon={CubeIcon} formatter={(v) => v.toLocaleString()} />
+                        <KpiCard title="Total Units In Stock" value={priceListKpis.totalUnitsInStock} icon={CubeIcon} formatter={(v) => v.toLocaleString()} />
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

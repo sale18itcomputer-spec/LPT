@@ -18,7 +18,7 @@ const MotionDiv = motion.div;
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, children, title, description, controls, onExpand, ...props }, ref) => {
-    const baseClassName = "bg-secondary-bg dark:bg-dark-secondary-bg rounded-xl shadow-sm border border-border-color dark:border-dark-border-color flex flex-col";
+    const baseClassName = "bg-secondary-bg dark:bg-dark-secondary-bg rounded-xl shadow-sm border border-border-color dark:border-dark-border-color flex flex-col min-w-0";
     const combinedClassName = [baseClassName, className].filter(Boolean).join(' ');
     const isClickable = !!props.onClick;
 
