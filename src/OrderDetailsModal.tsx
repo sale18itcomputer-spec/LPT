@@ -103,15 +103,15 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ isOpen, onClose, 
     }
     
     try {
-        const headerMapping: Record<keyof Order, string> = {
+        const headerMapping: Partial<Record<keyof Order, string>> = {
             specification: 'Specification', qty: 'Shipping Quantity', fobUnitPrice: 'Unit Price',
             factoryToSgp: 'Status to SGP', status: 'Status to KH',
             ShipDate: 'Schedule ship date', dateIssuePI: 'Order Receipt Date', eta: 'ETA', actualArrival: 'Actual Arrival',
             deliveryNumber: 'Delivery Number',
-            // Non-editable fields:
+            // Non-editable fields below are just for type completeness, but won't be in `updates` if not changed.
             salesOrder: 'Sales Order Number', mtm: 'Product ID', modelName: 'Model Name',
             orderValue: 'Amount ( $ )', isDelayedProduction: 'isDelayedProduction', isDelayedTransit: 'isDelayedTransit',
-            isAtRisk: 'isAtRisk', segment: 'Segment', landingCostUnitPrice: 'Add on Unit Price',
+            isAtRisk: 'isAtRisk', landingCostUnitPrice: 'Add on Unit Price',
         };
 
         const changes: Record<string, any> = {};

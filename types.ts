@@ -23,7 +23,6 @@ export interface Order {
   isDelayedProduction: boolean;
   isDelayedTransit: boolean;
   isAtRisk: boolean;
-  segment: string;
   deliveryNumber: string | null;
 }
 

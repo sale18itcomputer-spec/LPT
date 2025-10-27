@@ -14,7 +14,7 @@ import { useToast } from '../../contexts/ToastContext';
 
 interface InventoryDashboardProps {
     inventoryData: InventoryItem[];
-    onNavigate: (view: ViewType, filters: Partial<LocalFiltersState>) => void;
+    onNavigateAndFilter: (view: ViewType, filters: Partial<LocalFiltersState>) => void;
     onPsrefLookup: (item: { mtm: string; modelName: string }) => void;
     localFilters: LocalFiltersState;
     setLocalFilters: React.Dispatch<React.SetStateAction<LocalFiltersState>>;
@@ -26,7 +26,7 @@ const itemVariants: Variants = { hidden: { y: 30, opacity: 0, scale: 0.97 }, vis
 const headerVariants: Variants = { hidden: { y: -20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { duration: 0.7, ease: 'easeOut' } } };
 const filterBadgeVariants: Variants = { initial: { scale: 0, opacity: 0 }, animate: { scale: 1, opacity: 1, transition: { type: 'spring', stiffness: 500, damping: 30 } }, exit: { scale: 0, opacity: 0, transition: { duration: 0.2 } } };
 
-const InventoryDashboard = React.forwardRef<HTMLDivElement, InventoryDashboardProps>(({ inventoryData, onNavigate, onPsrefLookup, localFilters, setLocalFilters, userRole }, ref) => {
+const InventoryDashboard = React.forwardRef<HTMLDivElement, InventoryDashboardProps>(({ inventoryData, onNavigateAndFilter, onPsrefLookup, localFilters, setLocalFilters, userRole }, ref) => {
     const { showToast } = useToast();
     const [showScrollTop, setShowScrollTop] = useState(false);
     
@@ -91,7 +91,7 @@ const InventoryDashboard = React.forwardRef<HTMLDivElement, InventoryDashboardPr
     }, [setLocalFilters, showToast]);
 
     const currencyFormatter = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
-    const handleFilterClick = (filter: LocalFiltersState['stockStatus']) => onNavigate('inventory', { stockStatus: localFilters.stockStatus === filter ? 'all' : filter });
+    const handleFilterClick = (filter: LocalFiltersState['stockStatus']) => onNavigateAndFilter('inventory', { stockStatus: localFilters.stockStatus === filter ? 'all' : filter });
 
     return (
         <main ref={mainContentRef} className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 space-y-8">

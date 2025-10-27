@@ -181,7 +181,6 @@ const processOrderData = (rawData: Record<string, string>[]): OrderDataResponse 
           isDelayedProduction,
           isDelayedTransit,
           isAtRisk,
-          segment: 'N/A',
           deliveryNumber: deliveryNumber || null,
         };
       })

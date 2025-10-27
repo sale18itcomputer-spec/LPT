@@ -429,7 +429,7 @@ const OrderVsSalePage: React.FC<OrderVsSalePageProps> = ({ onNavigateAndFilter, 
         return reconciliationGroups.filter(group => {
             if (orderVsSaleSearchTerm && !(group.salesOrder.toLowerCase().includes(orderVsSaleSearchTerm.toLowerCase()) || group.orders.some(o => o.mtm.toLowerCase().includes(orderVsSaleSearchTerm.toLowerCase())))) return false;
             if (orderVsSaleStatus !== 'all' && group.status !== orderVsSaleStatus) return false;
-            if (orderVsSaleSegment.length > 0 && !group.orders.some(o => o.segment && orderVsSaleSegment.includes(o.segment))) return false;
+            if (orderVsSaleSegment.length > 0 && !group.sales.some(s => s.segment && orderVsSaleSegment.includes(s.segment))) return false;
             return true;
         });
     }, [reconciliationGroups, localFilters]);

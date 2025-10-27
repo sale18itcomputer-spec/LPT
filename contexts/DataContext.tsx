@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useMemo, useCallback, ReactNode, useEffect } from 'react';
 import type { 
     Order, Sale, InventoryItem, Customer, 
@@ -182,34 +181,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsRefreshing(false);
     }, [refreshOrders, refreshSales, refreshSerialization, refreshRebates, refreshRebateDetails, refreshRebateSales, refreshShipments, refreshBackpackCosts, refreshPriceList]);
 
-    
-    const mtmToSegmentMap = useMemo(() => {
-        const segmentCountsByMtm: Record<string, Record<string, number>> = {};
-        rawAllSales.forEach(sale => {
-            if (sale.segment && sale.segment !== 'N/A') {
-                if (!segmentCountsByMtm[sale.lenovoProductNumber]) {
-                    segmentCountsByMtm[sale.lenovoProductNumber] = {};
-                }
-                segmentCountsByMtm[sale.lenovoProductNumber][sale.segment] = (segmentCountsByMtm[sale.lenovoProductNumber][sale.segment] || 0) + 1;
-            }
-        });
-
-        const dominantSegmentMap = new Map<string, string>();
-        for (const mtm in segmentCountsByMtm) {
-            const segments = segmentCountsByMtm[mtm];
-            const dominantSegment = Object.keys(segments).reduce((a, b) => segments[a] > segments[b] ? a : b);
-            dominantSegmentMap.set(mtm, dominantSegment);
-        }
-        return dominantSegmentMap;
-    }, [rawAllSales]);
-
-    const allOrders: Order[] = useMemo(() => {
-        return rawAllOrders.map(order => ({
-                ...order,
-                segment: mtmToSegmentMap.get(order.mtm) || 'N/A'
-            }));
-    }, [rawAllOrders, mtmToSegmentMap]);
-
+    const allOrders = rawAllOrders;
     const allSales = rawAllSales;
     
     const allInvoicesCount = useMemo(() => new Set(allSales.map(s => s.invoiceNumber)).size, [allSales]);
