@@ -3,10 +3,10 @@ import React, { useMemo, useContext, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DocumentMagnifyingGlassIcon, SparklesIcon, XMarkIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon } from '../../ui/Icons';
+import { DocumentMagnifyingGlassIcon, SparklesIcon, XMarkIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon } from '../ui/Icons';
 import { ThemeContext } from '../../../contexts/ThemeContext';
-import { Spinner } from '../../ui/Spinner';
-import AnimatedCounter from '../../ui/AnimatedCounter';
+import { Spinner } from '../ui/Spinner';
+import AnimatedCounter from '../ui/AnimatedCounter';
 
 interface TrendData {
   sortKey: string;
@@ -29,14 +29,15 @@ const SummaryStat: React.FC<{ label: string; value: number; formatter: (val: num
     return (
         <div className="text-center">
             <p className="text-xs text-secondary-text dark:text-dark-secondary-text">{label}</p>
-            <p className="text-lg font-bold text-primary-text dark:text-dark-primary-text">
-                <AnimatedCounter to={value} formatter={formatter} />
-            </p>
-            {trend !== null && trend !== undefined && (
-                <div className={`flex items-center justify-center text-xs font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                    {isPositive ? <ArrowTrendingUpIcon className="h-3 w-3 mr-0.5"/> : <ArrowTrendingDownIcon className="h-3 w-3 mr-0.5"/>}
-                    {Math.abs(trend).toFixed(1)}%
+            {trend !== null && trend !== undefined ? (
+                 <div className={`text-lg font-bold flex items-center justify-center ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                    {isPositive ? <ArrowTrendingUpIcon className="h-4 w-4 mr-0.5"/> : <ArrowTrendingDownIcon className="h-4 w-4 mr-0.5"/>}
+                    <span>{Math.abs(trend).toFixed(1)}%</span>
                 </div>
+            ) : (
+                <p className="text-lg font-bold text-primary-text dark:text-dark-primary-text">
+                    <AnimatedCounter to={value} formatter={formatter} />
+                </p>
             )}
         </div>
     );
@@ -50,6 +51,14 @@ const RevenueTrendChart: React.FC<RevenueTrendChartProps> = React.memo(({ trendD
 
     const labelColor = isDark ? '#d4d4d8' : '#4B5563';
     const gridBorderColor = isDark ? '#3f3f46' : '#E5E7EB';
+    
+    // Force resize on mount to fix rendering issues inside flex/grid containers
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            chartRef.current?.getEchartsInstance().resize();
+        }, 150);
+        return () => clearTimeout(timer);
+    }, []);
     
     const selectedPeriodKey = useMemo(() => {
         if (!selectedStartDate) return null;
@@ -68,9 +77,9 @@ const RevenueTrendChart: React.FC<RevenueTrendChartProps> = React.memo(({ trendD
         }
     }, [selectedStartDate, granularity]);
 
-    const { summaryStats, movingAverageData } = useMemo(() => {
+    const { summaryStats } = useMemo(() => {
         if (trendData.length === 0) {
-            return { summaryStats: { min: 0, max: 0, avg: 0, median: 0, growth: null }, movingAverageData: [] };
+            return { summaryStats: { min: 0, max: 0, avg: 0, median: 0, growth: null } };
         }
         const values = trendData.map(d => d.value);
         const sortedValues = [...values].sort((a, b) => a - b);
@@ -84,18 +93,7 @@ const RevenueTrendChart: React.FC<RevenueTrendChartProps> = React.memo(({ trendD
             growth: firstValue > 0 && trendData.length > 1 ? ((lastValue - firstValue) / firstValue) * 100 : null,
         };
         
-        const maData: (number | null)[] = [];
-        const maPeriod = 3;
-        for (let i = 0; i < trendData.length; i++) {
-            if (i < maPeriod - 1) {
-                maData.push(null);
-            } else {
-                const sum = trendData.slice(i - maPeriod + 1, i + 1).reduce((acc, curr) => acc + curr.value, 0);
-                maData.push(Math.round(sum / maPeriod));
-            }
-        }
-
-        return { summaryStats: stats, movingAverageData: maData };
+        return { summaryStats: stats };
     }, [trendData]);
     
     useEffect(() => {
@@ -154,7 +152,6 @@ const RevenueTrendChart: React.FC<RevenueTrendChartProps> = React.memo(({ trendD
                 if (!currentData) return '';
                 
                 const revenueParam = params.find((p: any) => p.seriesName === 'Revenue');
-                const maParam = params.find((p: any) => p.seriesName === 'Moving Average');
                 
                 let trendIndicator = '';
                 if (dataIndex > 0) {
@@ -171,20 +168,9 @@ const RevenueTrendChart: React.FC<RevenueTrendChartProps> = React.memo(({ trendD
                         <div class="grid grid-cols-[auto,1fr] gap-x-4">
                             <span>Revenue:</span><span class="font-semibold text-right">${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(revenueParam?.value ?? 0)}</span>
                             <span>MoM Change:</span><span class="font-semibold text-right">${trendIndicator || 'N/A'}</span>
-                            ${maParam?.value !== undefined ? `<span>3-Per. MA:</span><span class="font-semibold text-right">${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(maParam.value)}</span>` : ''}
                         </div>
                     </div>
                 `;
-            }
-        },
-         visualMap: {
-            show: false,
-            type: 'continuous',
-            seriesIndex: 0,
-            min: summaryStats.min,
-            max: summaryStats.max,
-            inRange: {
-                color: isDark ? ['#4f46e5', '#3b82f6', '#60a5fa'] : ['#6366F1', '#3B82F6', '#60A5FA']
             }
         },
         xAxis: {
@@ -207,6 +193,7 @@ const RevenueTrendChart: React.FC<RevenueTrendChartProps> = React.memo(({ trendD
             smooth: true,
             data: trendData.map(d => Math.round(d.value)),
             showSymbol: false,
+            color: isDark ? '#60a5fa' : '#3b82f6',
             emphasis: { focus: 'series', itemStyle: { borderWidth: 2, borderColor: '#fff', shadowBlur: 5, shadowColor: 'rgba(0,0,0,0.3)' } },
             lineStyle: { width: 3, shadowColor: 'rgba(0, 0, 0, 0.3)', shadowBlur: 10, shadowOffsetY: 8 },
             areaStyle: {
@@ -218,28 +205,8 @@ const RevenueTrendChart: React.FC<RevenueTrendChartProps> = React.memo(({ trendD
                 symbol: 'none',
                 data: [{ yAxis: summaryStats.avg, name: 'Average', lineStyle: { type: 'dashed', color: isDark ? '#FBBF24' : '#F59E0B' }, label: { formatter: 'Avg: ${c}', position: 'insideEndTop', color: isDark ? '#FBBF24' : '#D97706' } }]
             },
-             markPoint: {
-                symbol: 'pin',
-                symbolSize: 50,
-                data: [
-                    { type: 'max', name: 'Max', itemStyle: { color: isDark ? '#34D399' : '#10B981' } },
-                    { type: 'min', name: 'Min', itemStyle: { color: isDark ? '#F87171' : '#EF4444' } }
-                ],
-                label: {
-                    formatter: (params: any) => new Intl.NumberFormat('en-US', { notation: 'compact' }).format(params.value)
-                }
-            }
-        },
-        {
-            name: 'Moving Average',
-            type: 'line',
-            data: movingAverageData,
-            smooth: true,
-            showSymbol: false,
-            lineStyle: { width: 2, type: 'dashed', color: isDark ? '#F472B6' : '#EC4899' },
-            tooltip: { valueFormatter: (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value as number) }
         }],
-    }), [trendData, isDark, labelColor, gridBorderColor, selectedPeriodKey, summaryStats, movingAverageData]);
+    }), [trendData, isDark, labelColor, gridBorderColor, selectedPeriodKey, summaryStats]);
     
     const onEvents = {
         click: (params: any) => {

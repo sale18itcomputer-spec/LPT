@@ -43,7 +43,7 @@ const AccessoryCostsPage: React.FC = () => {
     const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'so', direction: 'asc' });
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(15);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const orderInfoMap = useMemo(() => {
         const map = new Map<string, { modelName: string; qty: number }>();
@@ -289,7 +289,14 @@ const AccessoryCostsPage: React.FC = () => {
                             <div><p className="text-sm text-gray-600 dark:text-gray-400">Showing <span className="font-medium">{Math.min((currentPage - 1) * itemsPerPage + 1, sortedAndFilteredData.length)}</span> to <span className="font-medium">{Math.min(currentPage * itemsPerPage, sortedAndFilteredData.length)}</span> of <span className="font-medium">{sortedAndFilteredData.length}</span> items</p></div>
                             <div className="flex items-center space-x-2">
                                 <label htmlFor="items-per-page-select-accessory" className="text-sm text-gray-600 dark:text-gray-400">Rows:</label>
-                                <select id="items-per-page-select-accessory" value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1 px-2 text-primary-text dark:text-dark-primary-text text-sm"><option value="15">15</option><option value="30">30</option><option value="50">50</option></select>
+                                <select id="items-per-page-select-accessory" value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1 px-2 text-primary-text dark:text-dark-primary-text text-sm">
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                    <option value="200">200</option>
+                                    <option value="500">500</option>
+                                </select>
                                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination"><button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-primary-bg disabled:opacity-50">Prev</button><span className="relative inline-flex items-center px-4 py-2 border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-gray-700 dark:text-gray-300">{currentPage} / {totalPages}</span><button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-primary-bg disabled:opacity-50">Next</button></nav>
                             </div>
                         </div>

@@ -1,4 +1,5 @@
-import React, { useContext, useMemo } from 'react';
+
+import React, { useContext, useMemo, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { DocumentMagnifyingGlassIcon } from '../ui/Icons';
@@ -12,10 +13,19 @@ interface SegmentRevenueChartProps {
 
 const SegmentRevenueChart: React.FC<SegmentRevenueChartProps> = React.memo(({ segments, onSegmentSelect, selectedSegment }) => {
     const themeContext = useContext(ThemeContext);
+    const chartRef = useRef<ReactECharts>(null);
     const isDark = themeContext?.theme === 'dark';
 
     const totalColor = isDark ? '#d4d4d8' : '#4B5563';
     const valueColor = isDark ? '#f9fafb' : '#1F2937';
+    
+    // Force resize on mount to fix rendering issues inside flex/grid containers
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            chartRef.current?.getEchartsInstance().resize();
+        }, 150);
+        return () => clearTimeout(timer);
+    }, []);
 
     if (segments.length === 0) {
         return (
@@ -99,6 +109,7 @@ const SegmentRevenueChart: React.FC<SegmentRevenueChartProps> = React.memo(({ se
     return (
          <div aria-label="Revenue by segment pie chart" role="figure" tabIndex={0}>
             <ReactECharts
+                ref={chartRef}
                 option={options}
                 style={{ height: '100%', width: '100%' }}
                 onEvents={onEvents}

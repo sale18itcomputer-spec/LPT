@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useCallback, Fragment, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePriceListData } from '../../hooks/usePriceListData';
@@ -157,7 +156,7 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, setLocalFil
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [selectedItemForAI, setSelectedItemForAI] = useState<AugmentedMtmGroup | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(15);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     
     useEffect(() => {
         setCurrentPage(1);
@@ -570,9 +569,12 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, setLocalFil
                                 onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
                                 className="bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1 px-2 text-primary-text dark:text-dark-primary-text text-sm focus:ring-highlight focus:border-highlight"
                             >
-                                <option value="15">15</option>
-                                <option value="30">30</option>
+                                <option value="10">10</option>
+                                <option value="25">25</option>
                                 <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="200">200</option>
+                                <option value="500">500</option>
                             </select>
                             <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                                 <button

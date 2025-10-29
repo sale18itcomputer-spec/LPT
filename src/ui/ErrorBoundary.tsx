@@ -1,3 +1,5 @@
+
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { ExclamationTriangleIcon } from './Icons';
 
@@ -11,9 +13,11 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-  };
+  // FIX: Initialize state in the constructor instead of as a class property to fix errors with `this.state` and `this.props`.
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };

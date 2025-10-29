@@ -133,7 +133,7 @@ const CustomerValueMatrix: React.FC<CustomerValueMatrixProps> = React.memo(({ cu
         <div className="relative w-full" aria-label="Customer Value Matrix with four quadrants" role="figure" tabIndex={0}>
             <motion.div variants={{ visible: { transition: { staggerChildren: 0.1 } } }} initial="hidden" animate="visible">
                 {/* Desktop View with Axes */}
-                <div className="hidden lg:grid lg:grid-cols-[auto,1fr,1fr] lg:grid-rows-[auto,1fr,1fr] gap-4">
+                <div className="hidden md:grid md:grid-cols-[auto,1fr,1fr] md:grid-rows-[auto,1fr,1fr] gap-4">
                     <div className="col-start-2 col-span-2 flex items-center justify-center gap-x-2 text-xs font-semibold text-secondary-text dark:text-dark-secondary-text tracking-wider">
                         <span className="text-gray-400">LOW</span>
                         <div className="flex-grow h-px bg-border-color dark:bg-dark-border-color"></div>
@@ -157,7 +157,7 @@ const CustomerValueMatrix: React.FC<CustomerValueMatrixProps> = React.memo(({ cu
                 </div>
 
                 {/* Mobile/Tablet View */}
-                <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Quadrant title="Champions" description="Your best customers. Reward and retain." icon={TrophyIcon} items={matrixData.champions} bgGradientClass="bg-gradient-to-br from-red-100 to-orange-100 dark:from-red-900/30 dark:to-orange-900/30" borderColorClass="border-red-200 dark:border-red-800/30" onSelectCustomer={onSelectCustomer} onSelectQuadrant={() => onQuadrantSelect('champions')} isSelected={selectedQuadrant === 'champions'} />
                     <Quadrant title="High Spenders" description="High value, low frequency. Increase engagement." icon={BanknotesIcon} items={matrixData.highSpenders} bgGradientClass="bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30" borderColorClass="border-blue-200 dark:border-blue-800/30" onSelectCustomer={onSelectCustomer} onSelectQuadrant={() => onQuadrantSelect('highSpenders')} isSelected={selectedQuadrant === 'highSpenders'} />
                     <Quadrant title="Loyal Customers" description="High frequency, low value. Upsell opportunities." icon={ArrowUpCircleIcon} items={matrixData.loyal} bgGradientClass="bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30" borderColorClass="border-amber-200 dark:border-amber-800/30" onSelectCustomer={onSelectCustomer} onSelectQuadrant={() => onQuadrantSelect('loyal')} isSelected={selectedQuadrant === 'loyal'} />

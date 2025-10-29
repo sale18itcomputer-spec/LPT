@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GoogleGenAI } from "@google/genai";
+// FIX: Add `Type` to import for defining response schema.
+import { GoogleGenAI, Type } from "@google/genai";
 import ModalPanel from '../ui/ModalPanel';
 import { XMarkIcon, SparklesIcon, ExclamationTriangleIcon, ArrowLongRightIcon, LinkIcon } from '../ui/Icons';
 import type { AugmentedMtmGroup } from './PriceListPage';
@@ -75,59 +76,50 @@ const AIPricingModal: React.FC<AIPricingModalProps> = ({ isOpen, onClose, item, 
             
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             
+            // FIX: Updated prompt to remove Google Search requirement and rely on model's knowledge.
             const prompt = `
-You are an expert pricing strategist for Lenovo's Cambodian domestic market. Your goal is to suggest an optimal Suggested Dealer Price (SDP) and Suggested Retail Price (SRP) for a product. Your recommendations must be based on real-time competitor pricing and our internal data.
+You are an expert pricing strategist for Lenovo's Cambodian domestic market. Your goal is to suggest an optimal Suggested Dealer Price (SDP) and Suggested Retail Price (SRP) for a product based on your knowledge and the provided internal data.
 
-**Analysis Task:**
+**Internal Data:**
+${userRole === 'Admin' ? `- **Average Landing Cost (our cost): $${item.averageLandingCost.toFixed(2)}**` : ''}
+- On-Hand Stock: ${item.onHandQty} units
+- Weeks of Inventory: ${item.weeksOfInventory === null ? 'N/A (No sales history)' : `${item.weeksOfInventory} weeks`}
+- 90-Day Sales Velocity: ${item.sales90d} units sold
 
-1.  **Research Competitors (MANDATORY):** Use Google Search to find current retail prices for the **"${item.modelName}" (MTM: ${item.mtm})** and its direct competitors **specifically in Cambodia**. Analyze its specifications to make relevant comparisons.
+**Analysis Task & Output:**
+Based on the provided internal data and your general knowledge of the market for "${item.modelName}" (MTM: ${item.mtm}) in Cambodia, recommend an optimal SDP and SRP.
+${userRole === 'Admin' ? `- The SDP **must** ensure a healthy profit margin over our **Average Landing Cost**.` : ''}
+- The SRP must be competitive while offering an attractive margin to dealers (the difference between SRP and SDP).
+- Round prices to psychologically appealing numbers (e.g., ending in 5, 8, or 9).
+- Provide a concise one-sentence reasoning for your recommendation.
 
-2.  **Analyze Internal Data:**
-    ${userRole === 'Admin' ? `- **Average Landing Cost (our cost): $${item.averageLandingCost.toFixed(2)}**` : ''}
-    - On-Hand Stock: ${item.onHandQty} units
-    - Weeks of Inventory: ${item.weeksOfInventory === null ? 'N/A (No sales history)' : `${item.weeksOfInventory} weeks`}
-    - 90-Day Sales Velocity: ${item.sales90d} units sold
-
-3.  **Synthesize & Recommend:** Based on both market research and internal data, recommend an optimal SDP and SRP.
-    ${userRole === 'Admin' ? `- The SDP **must** ensure a healthy profit margin over our **Average Landing Cost**.` : ''}
-    - The SRP must be competitive in the Cambodian market while offering an attractive margin to dealers (the difference between SRP and SDP).
-    - Round prices to psychologically appealing numbers (e.g., ending in 5, 8, or 9).
-
-4.  **Provide Reasoning:** Explain your reasoning in **one concise sentence**, referencing both market conditions (e.g., competitor prices) and our internal stock/sales situation (e.g., slow-moving, high demand).
-
-5.  **Format Output:** Return your response as a **single, valid JSON object** with no other text, markdown, or formatting. The JSON object must have this exact structure: \`{"suggested_sdp": <number>, "suggested_srp": <number>, "reasoning": "<string>"}\`.
+Return your response as a single, valid JSON object with this exact structure: \`{"suggested_sdp": <number>, "suggested_srp": <number>, "reasoning": "<string>"}\`.
 `;
             
+            // FIX: Refactored API call to be compliant with guidelines.
+            // Removed `googleSearch` tool and added `responseMimeType` and `responseSchema` to guarantee JSON.
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    suggested_sdp: { type: Type.NUMBER },
+                    suggested_srp: { type: Type.NUMBER },
+                    reasoning: { type: Type.STRING }
+                },
+                required: ["suggested_sdp", "suggested_srp", "reasoning"]
+            };
+
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: prompt,
                 config: {
                     temperature: 0.5,
-                    tools: [{ googleSearch: {} }],
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
                 },
             });
             
-            const text = response.text;
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                setSuggestion(JSON.parse(jsonMatch[0]));
-            } else {
-                throw new Error("AI did not return a valid JSON object in its response.");
-            }
-            
-            const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-            if (groundingChunks) {
-                const fetchedSources: Source[] = groundingChunks
-                    .map((chunk: any) => chunk.web)
-                    .filter((web: any): web is Source => web && web.uri && web.title)
-                    .reduce((acc: Source[], current: Source) => {
-                        if (!acc.some(item => item.uri === current.uri)) {
-                            acc.push(current);
-                        }
-                        return acc;
-                    }, []);
-                setSources(fetchedSources);
-            }
+            // FIX: Simplified parsing as response is guaranteed to be JSON.
+            setSuggestion(JSON.parse(response.text));
 
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
@@ -198,32 +190,6 @@ You are an expert pricing strategist for Lenovo's Cambodian domestic market. You
                                         <h4 className="font-semibold text-primary-text dark:text-dark-primary-text">Reasoning</h4>
                                         <p className="text-sm text-secondary-text dark:text-dark-secondary-text mt-1 p-3 bg-gray-50 dark:bg-dark-secondary-bg/30 border border-border-color dark:border-dark-border-color rounded-lg italic">"{suggestion.reasoning}"</p>
                                     </div>
-                                     {sources.length > 0 && (
-                                        <div>
-                                            <h4 className="font-semibold text-primary-text dark:text-dark-primary-text">Sources</h4>
-                                            <ul className="mt-2 space-y-2 text-sm">
-                                                {sources.map((source, index) => (
-                                                    <motion.li 
-                                                        key={index}
-                                                        initial={{ opacity: 0, x: -10 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: index * 0.1 }}
-                                                    >
-                                                        <a 
-                                                            href={source.uri} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer" 
-                                                            className="flex items-center p-2 rounded-md bg-gray-100 dark:bg-dark-secondary-bg/50 hover:bg-gray-200 dark:hover:bg-dark-secondary-bg group transition-colors"
-                                                            title={source.title}
-                                                        >
-                                                            <LinkIcon className="h-4 w-4 mr-2 flex-shrink-0 text-secondary-text dark:text-dark-secondary-text" />
-                                                            <span className="truncate text-highlight group-hover:underline">{source.title}</span>
-                                                        </a>
-                                                    </motion.li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>

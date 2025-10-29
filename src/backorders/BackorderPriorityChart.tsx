@@ -30,12 +30,11 @@ const MatrixQuadrant: React.FC<{
     onClick: () => void;
     isSelected: boolean;
 }> = ({ title, description, icon: Icon, items, bgColorClass, borderColorClass, onClick, isSelected }) => (
-    <motion.button
+    <motion.div
         variants={quadrantVariants}
-        // onClick={onClick} // CRASH FIX: This functionality is disabled to prevent crashes as requested.
+        onClick={onClick}
         whileHover={{ scale: 1.02, y: -2 }}
-        whileTap={{ scale: 0.98 }}
-        className={`rounded-lg p-4 flex flex-col h-full text-left ${bgColorClass} border ${borderColorClass} shadow-sm transition-all duration-300 ${isSelected ? 'ring-2 ring-highlight ring-offset-2' : 'ring-0'}`}
+        className={`rounded-lg p-4 flex flex-col h-full text-left cursor-pointer ${bgColorClass} border ${borderColorClass} shadow-sm transition-all duration-300 ${isSelected ? 'ring-2 ring-highlight ring-offset-2' : 'ring-0'}`}
     >
         <div className="flex items-center gap-x-3 mb-3">
             <Icon className="h-6 w-6 text-primary-text dark:text-dark-primary-text" />
@@ -69,7 +68,7 @@ const MatrixQuadrant: React.FC<{
                 </div>
             )}
         </motion.div>
-    </motion.button>
+    </motion.div>
 );
 
 interface BackorderPriorityChartProps {

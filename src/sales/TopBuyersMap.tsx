@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo, useContext, useState } from 'react';
-import { Spinner } from '../../ui/Spinner';
+import { Spinner } from '../ui/Spinner';
 import { ThemeContext } from '../../../contexts/ThemeContext';
 
 // Declare the global `google` object to fix TypeScript errors related to the Google Maps API.

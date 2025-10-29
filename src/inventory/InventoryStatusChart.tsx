@@ -1,4 +1,5 @@
-import React, { useMemo, useContext } from 'react';
+
+import React, { useMemo, useContext, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import type { InventoryItem } from '../../types';
@@ -22,10 +23,19 @@ const MUTED_COLOR = '#D1D5DB';
 
 const InventoryStatusChart: React.FC<InventoryStatusChartProps> = React.memo(({ data, onFilterChange, activeFilter }) => {
     const themeContext = useContext(ThemeContext);
+    const chartRef = useRef<ReactECharts>(null);
     const isDark = themeContext?.theme === 'dark';
 
     const labelColor = isDark ? '#d4d4d8' : '#71717a';
     const primaryTextColor = isDark ? '#f9fafb' : '#18181b';
+    
+    // Force resize on mount to fix rendering issues inside flex/grid containers
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            chartRef.current?.getEchartsInstance().resize();
+        }, 150);
+        return () => clearTimeout(timer);
+    }, []);
 
     const chartData = useMemo(() => {
         const statusCounts = {
@@ -131,6 +141,7 @@ const InventoryStatusChart: React.FC<InventoryStatusChartProps> = React.memo(({ 
     return (
         <div className="h-full w-full" aria-label="Inventory health status pie chart" role="figure" tabIndex={0}>
             <ReactECharts
+                ref={chartRef}
                 option={options}
                 style={{ height: '100%', width: '100%' }}
                 onEvents={onEvents}

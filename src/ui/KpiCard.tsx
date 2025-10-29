@@ -24,7 +24,7 @@ const KpiCard = React.forwardRef<HTMLDivElement, KpiCardProps>(({ label, value, 
 
     return (
       <motion.div ref={ref} onClick={onClick} variants={itemVariants} className="h-full">
-        <div className={`relative p-4 rounded-lg transition-all duration-200 h-full flex flex-col justify-center ${onClick ? 'cursor-pointer' : ''} ${isActive ? 'ring-2 ring-highlight shadow-md' : 'shadow-sm hover:shadow-lg hover:-translate-y-1'} bg-secondary-bg dark:bg-dark-secondary-bg`}>
+        <div className={`relative p-4 rounded-xl transition-all duration-300 h-full flex flex-col justify-center ${onClick ? 'cursor-pointer' : ''} ${isActive ? 'ring-2 ring-highlight shadow-lg' : 'shadow-md hover:shadow-xl hover:-translate-y-1.5'} bg-secondary-bg dark:bg-dark-secondary-bg`}>
             <div className="flex items-start justify-between">
                 <div className="flex-grow">
                     <p className="text-sm font-medium text-secondary-text dark:text-dark-secondary-text">{label}</p>

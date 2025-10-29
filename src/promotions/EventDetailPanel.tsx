@@ -10,6 +10,7 @@ import HistoricalSalesChart from './HistoricalSalesChart';
 import SegmentRevenueChart from './SegmentRevenueChart';
 import SurplusStockChart from './SurplusStockChart';
 import { DocumentMagnifyingGlassIcon, SparklesIcon, CalendarDaysIcon, ChevronLeftIcon } from '../ui/Icons';
+import ChartCard from '../ui/ChartCard';
 
 interface EventDetailPanelProps {
     holiday: Holiday;
@@ -63,19 +64,16 @@ const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ holiday, historical
                             <div className="space-y-6">
                                 {historicalAnalysis ? (
                                     <>
-                                        <div>
-                                            <h3 className="font-semibold text-primary-text mb-2">Last Year's Daily Sales</h3>
-                                            <div className="h-24"><HistoricalSalesChart dailySales={historicalAnalysis.dailySales} /></div>
-                                        </div>
+                                        <ChartCard title="Last Year's Daily Sales" className="h-[200px]">
+                                            <HistoricalSalesChart dailySales={historicalAnalysis.dailySales} />
+                                        </ChartCard>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div>
-                                                <h3 className="font-semibold text-primary-text mb-2">Revenue by Segment</h3>
-                                                <div className="h-48"><SegmentRevenueChart segments={historicalAnalysis.topSegments} onSegmentSelect={handleSegmentSelect} selectedSegment={selectedSegment} /></div>
-                                            </div>
-                                            <div>
-                                                <h3 className="font-semibold text-primary-text mb-2">Surplus Stock with Low Sales</h3>
-                                                <div className="h-48"><SurplusStockChart surplusItems={historicalAnalysis.surplusItems} /></div>
-                                            </div>
+                                            <ChartCard title="Revenue by Segment" className="h-[250px]">
+                                                <SegmentRevenueChart segments={historicalAnalysis.topSegments} onSegmentSelect={handleSegmentSelect} selectedSegment={selectedSegment} />
+                                            </ChartCard>
+                                            <ChartCard title="Surplus Stock with Low Sales" className="h-[250px]">
+                                                <SurplusStockChart surplusItems={historicalAnalysis.surplusItems} />
+                                            </ChartCard>
                                         </div>
                                     </>
                                 ) : (

@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useContext } from 'react';
+
+import React, { useState, useMemo, useContext, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import ReactApexChart from 'react-apexcharts';
-import type { ApexOptions } from 'apexcharts';
+import ReactECharts from 'echarts-for-react';
+import type { EChartsOption } from 'echarts';
 import type { Customer, Sale } from '../../types';
 import Card from '../ui/Card';
 import AnimatedCounter from '../ui/AnimatedCounter';
@@ -9,6 +10,7 @@ import { ChevronLeftIcon, BanknotesIcon, DocumentTextIcon, CubeIcon, DocumentMag
 import TierBadge from './TierBadge';
 import AIProfileAnalysis from './AIProfileAnalysis';
 import { ThemeContext } from '../../contexts/ThemeContext';
+import ChartCard from '../ui/ChartCard';
 
 const KpiCard: React.FC<{ label: string; value: number; icon: React.ReactElement<React.SVGProps<SVGSVGElement>>; formatter?: (val: number) => string; }> = ({ label, value, icon, formatter }) => (
     <Card className="p-5">
@@ -26,7 +28,18 @@ const KpiCard: React.FC<{ label: string; value: number; icon: React.ReactElement
 
 const PurchaseHistoryChart: React.FC<{ sales: Sale[] }> = ({ sales }) => {
     const themeContext = useContext(ThemeContext);
-    const { theme } = themeContext!;
+    const chartRef = useRef<ReactECharts>(null);
+    const isDark = themeContext?.theme === 'dark';
+    const labelColor = isDark ? '#d4d4d8' : '#4B5563';
+    const gridBorderColor = isDark ? '#3f3f46' : '#E5E7EB';
+    
+    // Force resize on mount to fix rendering issues inside flex/grid containers
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            chartRef.current?.getEchartsInstance().resize();
+        }, 150);
+        return () => clearTimeout(timer);
+    }, []);
 
     const chartData = useMemo(() => {
         const aggregated = sales.reduce((acc: Record<string, { value: number, quarter: string, year: number }>, sale) => {
@@ -60,77 +73,55 @@ const PurchaseHistoryChart: React.FC<{ sales: Sale[] }> = ({ sales }) => {
 
     const isDense = chartData.length > 8;
 
-    const series = [{
-        name: 'Revenue',
-        data: chartData.map(d => Math.round(d.value)),
-    }];
-
-    const options: ApexOptions = {
-        chart: {
-            type: 'bar',
-            height: '100%',
-            fontFamily: 'Inter, sans-serif',
-            toolbar: { show: false },
-        },
-        plotOptions: {
-            bar: {
-                columnWidth: '60%',
-                borderRadius: 4,
-            }
-        },
-        dataLabels: { enabled: false },
-        xaxis: {
-            categories: chartData.map(d => `${d.quarter} ${d.year}`),
-            labels: {
-                style: {
-                    colors: 'currentColor',
-                    fontSize: '0.75rem',
-                },
-                hideOverlappingLabels: true,
-                rotate: isDense ? -45 : 0,
-                rotateAlways: isDense,
-            },
-            axisBorder: { show: false },
-            axisTicks: { show: false },
-        },
-        yaxis: {
-            labels: {
-                style: {
-                    colors: 'currentColor',
-                    fontSize: '0.75rem',
-                },
-                formatter: (val) => val.toLocaleString('en-US'),
-            }
-        },
+    const options: EChartsOption = useMemo(() => ({
         grid: {
-            borderColor: '#E5E7EB',
-            strokeDashArray: 4,
-        },
-        fill: {
-            type: 'gradient',
-            gradient: {
-                shade: 'light',
-                type: 'vertical',
-                shadeIntensity: 0.25,
-                gradientToColors: undefined,
-                inverseColors: true,
-                opacityFrom: 1,
-                opacityTo: 1,
-                stops: [50, 0, 100],
-                colorStops: [
-                    { offset: 0, color: "#3B82F6", opacity: 1 },
-                    { offset: 100, color: "#93C5FD", opacity: 1 }
-                ]
-            }
+            left: '3%',
+            right: '4%',
+            bottom: isDense ? '12%' : '5%',
+            top: '10%',
+            containLabel: true,
         },
         tooltip: {
-            theme: theme,
-            y: {
-                formatter: (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val)
+            trigger: 'axis',
+            backgroundColor: isDark ? 'rgba(39, 39, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: isDark ? '#3f3f46' : '#e4e4e7',
+            textStyle: { color: isDark ? '#f9fafb' : '#18181b' },
+            formatter: (params: any) => {
+                if (!params || params.length === 0) return '';
+                const { name, value } = params[0];
+                return `<div class="font-sans text-sm">${name}: <strong>${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)}</strong></div>`;
             }
-        }
-    };
-    return <ReactApexChart options={options} series={series} type="bar" height="100%" />;
+        },
+        xAxis: {
+            type: 'category',
+            data: chartData.map(d => `${d.quarter} '${String(d.year).slice(2)}`),
+            axisLabel: { color: labelColor, fontSize: 12, rotate: isDense ? -45 : 0 },
+            axisLine: { show: false },
+            axisTick: { show: false },
+        },
+        yAxis: {
+            type: 'value',
+            axisLabel: { color: labelColor, fontSize: 12, formatter: (val: number) => new Intl.NumberFormat('en-US', { notation: 'compact' }).format(val) },
+            splitLine: { lineStyle: { color: gridBorderColor, type: 'dashed' } }
+        },
+        series: [{
+            name: 'Revenue',
+            type: 'bar',
+            data: chartData.map(d => Math.round(d.value)),
+            barWidth: '25%',
+            itemStyle: {
+                borderRadius: [4, 4, 0, 0],
+                color: {
+                    type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                    colorStops: isDark
+                        ? [{ offset: 0, color: '#60a5fa' }, { offset: 1, color: '#3b82f6' }]
+                        : [{ offset: 0, color: '#3b82f6' }, { offset: 1, color: '#2563eb' }]
+                }
+            }
+        }]
+    }), [chartData, isDark, isDense, labelColor, gridBorderColor]);
+
+    return <ReactECharts ref={chartRef} option={options} style={{ height: '100%', width: '100%' }} notMerge={true} lazyUpdate={true} />;
 };
 
 const TopProductsTable: React.FC<{ sales: Sale[]; userRole: string }> = ({ sales, userRole }) => {
@@ -156,11 +147,11 @@ const TopProductsTable: React.FC<{ sales: Sale[]; userRole: string }> = ({ sales
     }
 
     return (
-        <div>
+        <div className="h-full overflow-y-auto custom-scrollbar">
             {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto custom-scrollbar">
+            <div className="hidden md:block">
                 <table className="min-w-full">
-                    <thead className="bg-gray-50 dark:bg-dark-secondary-bg/20">
+                    <thead className="bg-gray-50 dark:bg-dark-secondary-bg/20 sticky top-0">
                         <tr>
                             <th className="px-4 py-2 text-left text-xs font-medium text-secondary-text dark:text-dark-secondary-text uppercase">MTM</th>
                             <th className="px-4 py-2 text-left text-xs font-medium text-secondary-text dark:text-dark-secondary-text uppercase">Model Name</th>
@@ -182,7 +173,7 @@ const TopProductsTable: React.FC<{ sales: Sale[]; userRole: string }> = ({ sales
             </div>
 
             {/* Mobile Card List */}
-            <div className="md:hidden space-y-3 p-4">
+            <div className="md:hidden space-y-3">
                 {topProducts.map(p => (
                     <div key={p.mtm} className="p-3 bg-gray-50 dark:bg-dark-secondary-bg/50 rounded-lg">
                         <div className="flex justify-between items-start">
@@ -258,14 +249,14 @@ const CustomerProfile = React.forwardRef<HTMLDivElement, CustomerProfileProps>((
             
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 <div className="lg:col-span-3">
-                    <Card title="Purchase History by Quarter">
-                        <div className="h-[250px] md:h-[300px] p-4 text-primary-text dark:text-dark-primary-text">
-                            <PurchaseHistoryChart sales={customer.sales} />
-                        </div>
-                    </Card>
+                    <ChartCard title="Purchase History by Quarter" className="h-[400px]">
+                        <PurchaseHistoryChart sales={customer.sales} />
+                    </ChartCard>
                 </div>
                 <div className="lg:col-span-2">
-                    <Card title="Top 10 Products by Revenue" className="p-0"><TopProductsTable sales={customer.sales} userRole={userRole} /></Card>
+                    <ChartCard title="Top 10 Products by Revenue" className="h-[400px]">
+                        <TopProductsTable sales={customer.sales} userRole={userRole} />
+                    </ChartCard>
                 </div>
             </div>
 

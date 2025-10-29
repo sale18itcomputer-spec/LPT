@@ -1,3 +1,4 @@
+
 import React, { useMemo, useContext, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
@@ -21,7 +22,7 @@ const ValueReconciliationChart: React.FC<ChartProps> = React.memo(({ orders, sal
     useEffect(() => {
         const timer = setTimeout(() => {
             chartRef.current?.getEchartsInstance().resize();
-        }, 100);
+        }, 150);
         return () => clearTimeout(timer);
     }, []);
     

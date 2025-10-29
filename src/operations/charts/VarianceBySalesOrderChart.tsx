@@ -1,3 +1,4 @@
+
 import React, { useMemo, useContext, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
@@ -24,7 +25,7 @@ const VarianceBySalesOrderChart: React.FC<ChartProps> = React.memo(({ orders, sa
     useEffect(() => {
         const timer = setTimeout(() => {
             chartRef.current?.getEchartsInstance().resize();
-        }, 100);
+        }, 150);
         return () => clearTimeout(timer);
     }, []);
 
@@ -116,7 +117,7 @@ const VarianceBySalesOrderChart: React.FC<ChartProps> = React.memo(({ orders, sa
         series: [{
             name: 'Unit Variance',
             type: 'bar',
-            barWidth: '60%',
+            barWidth: '25%',
             label: {
                 show: true,
                 position: 'right',

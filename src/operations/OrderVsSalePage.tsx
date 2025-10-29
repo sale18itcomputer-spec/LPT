@@ -7,7 +7,8 @@ import Card from '../ui/Card';
 import KpiCard from '../ui/KpiCard';
 // FIX: Import ChartCard component
 import ChartCard from '../ui/ChartCard';
-import { Order, Sale, DashboardType, LocalFiltersState, ReconciledSale, ViewType } from '../../types';
+// FIX: Import `Shipment` type to resolve type error.
+import { Order, Sale, DashboardType, LocalFiltersState, ReconciledSale, ViewType, Shipment } from '../../types';
 import { ArrowsRightLeftIcon, CubeIcon, TableCellsIcon, BanknotesIcon, ExclamationTriangleIcon, ChevronUpIcon, ChevronDownIcon, ChevronRightIcon, CheckCircleIcon, XCircleIcon, CalendarDaysIcon, TrophyIcon, DocumentMagnifyingGlassIcon } from '../ui/Icons';
 import ReconciliationStatusChart from './charts/ReconciliationStatusChart';
 import ValueReconciliationChart from './charts/ValueReconciliationChart';
@@ -78,7 +79,8 @@ const ExpandedDetailView: React.FC<{
 }> = ({ group, mtmToModelNameMap, shipmentCostMap, accessoryCostMap, serialToReconciledSale }) => {
     
     const orderedItemsAggregated = useMemo(() => {
-        const aggregation = group.orders.reduce<Record<string, { mtm: string; modelName: string; qty: number; value: number; arrivals: Set<string>; totalShippingCost: number; totalAccessoryCost: number; totalLandedCost: number; }>>((acc, order) => {
+// FIX: Explicitly type accumulator in `reduce` call to resolve type inference issues.
+        const aggregation = group.orders.reduce((acc: Record<string, { mtm: string; modelName: string; qty: number; value: number; arrivals: Set<string>; totalShippingCost: number; totalAccessoryCost: number; totalLandedCost: number; }>, order: Order) => {
             if (!acc[order.mtm]) {
                 acc[order.mtm] = {
                     mtm: order.mtm,
@@ -113,7 +115,8 @@ const ExpandedDetailView: React.FC<{
 
 
     const soldItemsAggregated = useMemo(() => {
-        return Object.values(group.sales.reduce<Record<string, { mtm: string; modelName: string; qty: number; revenue: number; lastSaleDate: string | null; totalRebate: number; totalProfit: number; }>>((acc, sale) => {
+// FIX: Explicitly type accumulator in `reduce` call to resolve type inference issues.
+        return Object.values(group.sales.reduce((acc: Record<string, { mtm: string; modelName: string; qty: number; revenue: number; lastSaleDate: string | null; totalRebate: number; totalProfit: number; }>, sale: AugmentedSale) => {
             const key = sale.lenovoProductNumber;
             if (!acc[key]) {
                 acc[key] = { mtm: key, modelName: sale.modelName, qty: 0, revenue: 0, lastSaleDate: null as string | null, totalRebate: 0, totalProfit: 0 };
@@ -352,31 +355,31 @@ const OrderVsSalePage: React.FC<OrderVsSalePageProps> = ({ onNavigateAndFilter, 
         }));
     }, [setLocalFilters]);
 
-    const augmentedSales: AugmentedSale[] = useMemo(() => {
+    const augmentedSales = useMemo(() => {
         const serialToSoMap = new Map<string, string>();
         reconciledSales.forEach(rs => {
             if (rs.salesOrder !== 'N/A') {
                 serialToSoMap.set(rs.serialNumber, rs.salesOrder);
             }
         });
-        return allSales.map(sale => ({
+        return (allSales as Sale[]).map(sale => ({
             ...sale,
             salesOrder: serialToSoMap.get(sale.serialNumber) || 'Unknown'
         }));
     }, [allSales, reconciledSales]);
 
-    const mtmToModelNameMap = useMemo(() => new Map(allOrders.map((o: Order) => [o.mtm, o.modelName])), [allOrders]);
+    const mtmToModelNameMap = useMemo(() => new Map<string, string>((allOrders as Order[]).map((o: Order) => [o.mtm, o.modelName])), [allOrders]);
     const shipmentCostMap = useMemo(() => {
         const map = new Map<string, number>();
-        allShipments.forEach(s => map.set(`${s.salesOrder}-${s.mtm}`, s.shippingCost));
+        (allShipments as Shipment[]).forEach(s => map.set(`${s.salesOrder}-${s.mtm}`, s.shippingCost));
         return map;
     }, [allShipments]);
     const accessoryCostMap = useMemo(() => {
         const map = new Map<string, number>();
-        allBackpackCosts.forEach(a => map.set(`${a.so}-${a.mtm}`, a.backpackCost));
+        (allBackpackCosts as any[]).forEach(a => map.set(`${a.so}-${a.mtm}`, a.backpackCost));
         return map;
     }, [allBackpackCosts]);
-    const serialToReconciledSale = useMemo(() => new Map(reconciledSales.map(rs => [rs.serialNumber, rs])), [reconciledSales]);
+    const serialToReconciledSale = useMemo(() => new Map((reconciledSales as ReconciledSale[]).map(rs => [rs.serialNumber, rs])), [reconciledSales]);
 
     const reconciliationGroups: ReconciliationGroup[] = useMemo(() => {
         const groupsBySO = new Map<string, { orders: Order[], sales: AugmentedSale[] }>();
@@ -435,11 +438,12 @@ const OrderVsSalePage: React.FC<OrderVsSalePageProps> = ({ onNavigateAndFilter, 
     }, [reconciliationGroups, localFilters]);
     
     const kpis = useMemo(() => {
-        return filteredGroups.reduce((acc, group) => {
+        return (filteredGroups as ReconciliationGroup[]).reduce((acc, group: ReconciliationGroup) => {
             acc.totalOrders++;
             acc.totalOrderQty += group.orderQty;
             acc.totalSaleQty += group.saleQty;
             acc.totalLandedCost += group.totalLandedCost;
+// FIX: Use `group.saleValue` instead of `group.totalSaleValue` to match the `ReconciliationGroup` interface.
             acc.totalSaleValue += group.saleValue;
             acc.totalProfit += group.totalProfit;
             return acc;
@@ -448,7 +452,7 @@ const OrderVsSalePage: React.FC<OrderVsSalePageProps> = ({ onNavigateAndFilter, 
     
     const currencyFormatter = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
     
-    const ordersForCharts = useMemo(() => allOrders.filter(o => filteredGroups.some(g => g.salesOrder === o.salesOrder)), [allOrders, filteredGroups]);
+    const ordersForCharts = useMemo(() => (allOrders as Order[]).filter(o => filteredGroups.some(g => g.salesOrder === o.salesOrder)), [allOrders, filteredGroups]);
     const salesForCharts = useMemo(() => augmentedSales.filter(s => filteredGroups.some(g => g.salesOrder === s.salesOrder)), [augmentedSales, filteredGroups]);
 
     return (
@@ -472,13 +476,13 @@ const OrderVsSalePage: React.FC<OrderVsSalePageProps> = ({ onNavigateAndFilter, 
                 
                 <div className="space-y-6 mt-6">
                     <div className="space-y-6">
-                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                           <ChartCard title="Reconciliation Status" description="Breakdown of matched sales orders by fulfillment status." className="h-[400px]"><ReconciliationStatusChart orders={ordersForCharts} sales={salesForCharts} onSelect={handleStatusSelect} selected={localFilters.orderVsSaleStatus === 'all' ? null : localFilters.orderVsSaleStatus} /></ChartCard>
-                           <ChartCard title="Value Reconciliation Over Time" description="Monthly FOB value of matched orders vs. revenue of matched sales." className="h-[400px]"><ValueReconciliationChart orders={ordersForCharts} sales={salesForCharts} /></ChartCard>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <ChartCard title="Reconciliation Status" description="Breakdown of matched sales orders by fulfillment status." className="h-[500px]"><ReconciliationStatusChart orders={ordersForCharts} sales={salesForCharts} onSelect={handleStatusSelect} selected={localFilters.orderVsSaleStatus === 'all' ? null : localFilters.orderVsSaleStatus} /></ChartCard>
+                           <ChartCard title="Value Reconciliation Over Time" description="Monthly FOB value of matched orders vs. revenue of matched sales." className="h-[500px]"><ValueReconciliationChart orders={ordersForCharts} sales={salesForCharts} /></ChartCard>
                        </div>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <ChartCard title="Top SO Variances" description="Sales orders with the largest unit discrepancies." className="h-[400px]"><VarianceBySalesOrderChart orders={ordersForCharts} sales={salesForCharts} onSelect={handleSOSelect} selected={localFilters.orderVsSaleSearchTerm} /></ChartCard>
-                            <ChartCard title="Unit Variance Over Time" description="Monthly ordered vs. sold units for matched items." className="h-[400px]"><UnitVarianceTimeSeriesChart orders={ordersForCharts} sales={salesForCharts} /></ChartCard>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <ChartCard title="Top SO Variances" description="Sales orders with the largest unit discrepancies." className="h-[500px]"><VarianceBySalesOrderChart orders={ordersForCharts} sales={salesForCharts} onSelect={handleSOSelect} selected={localFilters.orderVsSaleSearchTerm} /></ChartCard>
+                            <ChartCard title="Unit Variance Over Time" description="Monthly ordered vs. sold units for matched items." className="h-[500px]"><UnitVarianceTimeSeriesChart orders={ordersForCharts} sales={salesForCharts} /></ChartCard>
                         </div>
                     </div>
                     <div className="pt-6">

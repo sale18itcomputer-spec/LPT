@@ -1,3 +1,4 @@
+
 import React, { useMemo, useContext, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
@@ -23,7 +24,7 @@ const ReconciliationStatusChart: React.FC<ChartProps> = React.memo(({ orders, sa
     useEffect(() => {
         const timer = setTimeout(() => {
             chartRef.current?.getEchartsInstance().resize();
-        }, 100);
+        }, 150);
         return () => clearTimeout(timer);
     }, []);
 
@@ -101,45 +102,42 @@ const ReconciliationStatusChart: React.FC<ChartProps> = React.memo(({ orders, sa
             itemGap: 10,
             icon: 'circle',
         },
-        series: [
-            {
-                name: 'Reconciliation Status',
-                type: 'pie',
-                radius: ['70%', '90%'],
-                avoidLabelOverlap: false,
-                itemStyle: {
-                  borderRadius: 8,
-                  borderColor: isDark ? '#18181b' : '#F9FAFB',
-                  borderWidth: 4,
+        series: [{
+            name: 'Reconciliation Status',
+            type: 'pie',
+            radius: ['70%', '90%'],
+            avoidLabelOverlap: false,
+            itemStyle: {
+              borderRadius: 8,
+              borderColor: isDark ? '#18181b' : '#F9FAFB',
+              borderWidth: 4,
+            },
+            label: {
+                show: true,
+                position: 'center',
+                formatter: () => `{total|Total Orders}\n{value|${totalValue.toLocaleString()}}`,
+                rich: {
+                    total: { fontSize: 12, color: labelColor },
+                    value: { fontSize: 20, fontWeight: 'bold', color: primaryTextColor, padding: [5, 0] },
                 },
+            },
+            emphasis: {
                 label: {
                     show: true,
-                    position: 'center',
-                    formatter: () => `{total|Total Orders}\n{value|${totalValue.toLocaleString()}}`,
+                    formatter: (params: any) => `{name|${params.name}}\n{value|${Number(params.value).toLocaleString()}}`,
                     rich: {
-                        total: { fontSize: 14, color: labelColor },
-                        value: { fontSize: 28, fontWeight: 'bold', color: primaryTextColor, padding: [5, 0] },
-                    },
-                },
-                emphasis: {
-                    label: {
-                        show: true,
-                        formatter: (params: any) => `{name|${params.name}}\n{value|${Number(params.value).toLocaleString()}}`,
-                        rich: {
-                            name: { fontSize: 16, color: labelColor },
-                            value: { fontSize: 32, fontWeight: 'bold', color: primaryTextColor, padding: [5, 0] }
-                        }
+                        name: { fontSize: 14, color: labelColor },
+                        value: { fontSize: 24, fontWeight: 'bold', color: primaryTextColor, padding: [5, 0] }
                     }
-                },
-                data: chartData.map(d => ({
-                    ...d,
-                    itemStyle: {
-                        opacity: selected && selected !== d.name ? 0.3 : 1
-                    }
-                })),
-            }
-        ],
-        color: ['#10B981', '#F97316'],
+                }
+            },
+            data: chartData.map(d => ({
+                ...d,
+                itemStyle: {
+                    opacity: selected && selected !== d.name ? 0.3 : 1
+                }
+            })),
+        }]
     }), [chartData, totalValue, isDark, labelColor, primaryTextColor, selected]);
     
     const onEvents = {

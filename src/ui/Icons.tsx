@@ -30,6 +30,15 @@ export const ArchiveBoxIcon: React.FC<IconProps> = (props) => (
     </svg>
 );
 
+export const ArrowDownCircleIcon: React.FC<IconProps> = (props) => (
+    <svg {...defaultProps} {...props}>
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M12 7l0 10" />
+        <path d="M15 14l-3 3l-3 -3" />
+        <path d="M12 21a9 9 0 0 0 0 -18" />
+    </svg>
+);
+
 export const ArrowDownTrayIcon: React.FC<IconProps> = (props) => (
     <svg {...defaultProps} {...props}>
         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>

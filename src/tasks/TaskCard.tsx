@@ -83,7 +83,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging, onClick, handleDr
             
             <div className="flex-1 p-3 flex flex-col min-w-0">
                 <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-semibold text-primary-text dark:text-dark-primary-text leading-tight pr-2">{title}</h3>
+                    <h3 className="text-sm font-semibold text-primary-text dark:text-dark-primary-text leading-tight pr-2">{title}</h3>
                     <GripVerticalIcon className="h-5 w-5 text-gray-300 dark:text-gray-600 flex-shrink-0 cursor-grab" />
                 </div>
 

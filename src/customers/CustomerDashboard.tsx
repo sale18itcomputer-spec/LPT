@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView, Variants } from 'framer-motion';
 import type { Customer, CustomerTier, LocalFiltersState } from '../../types';
@@ -11,6 +12,7 @@ import TierBadge from './TierBadge';
 import CustomerValueMatrix from './CustomerValueMatrix';
 import { INITIAL_LOCAL_FILTERS } from '../../constants';
 import { useToast } from '../../contexts/ToastContext';
+import ChartCard from '../ui/ChartCard';
 
 const viewVariants: Variants = {
   enter: (direction: number) => ({ opacity: 0, x: direction > 0 ? 30 : -30 }),
@@ -213,13 +215,17 @@ const CustomerDashboard = React.forwardRef<HTMLDivElement, CustomerDashboardProp
             {customerData.length > 0 ? (
                 <motion.div initial="hidden" animate="visible" variants={containerVariants} className="space-y-8">
                      <motion.div variants={itemVariants}>
-                        <h2 className="text-2xl font-semibold tracking-tight text-primary-text mb-4">Customer Segmentation Matrix</h2>
-                        <CustomerValueMatrix 
-                            customers={customerData} 
-                            onSelectCustomer={handleSelectCustomer}
-                            onQuadrantSelect={handleQuadrantSelect}
-                            selectedQuadrant={localFilters.customerMatrixQuadrant}
-                        />
+                        <ChartCard
+                            title="Customer Segmentation Matrix"
+                            description="Customers segmented by purchase frequency and total revenue. Click a quadrant to filter."
+                        >
+                            <CustomerValueMatrix 
+                                customers={customerData} 
+                                onSelectCustomer={handleSelectCustomer}
+                                onQuadrantSelect={handleQuadrantSelect}
+                                selectedQuadrant={localFilters.customerMatrixQuadrant}
+                            />
+                        </ChartCard>
                     </motion.div>
                     <motion.div variants={itemVariants}>
                         <Card className="p-4 sm:p-6"><h3 className="text-lg font-semibold text-primary-text mb-4">All Customers</h3>

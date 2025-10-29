@@ -222,7 +222,7 @@ const AddOrdersPage: React.FC<AddOrdersPageProps> = ({ onSaveSuccess }) => {
                 transition={{ duration: 0.5 }}
                 className="max-w-7xl mx-auto"
             >
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                     {/* Left Panel */}
                     <div className="space-y-6">
                         <h1 className="text-3xl font-bold tracking-tight text-primary-text">Bulk Add New Orders</h1>
@@ -303,7 +303,7 @@ const AddOrdersPage: React.FC<AddOrdersPageProps> = ({ onSaveSuccess }) => {
                     </div>
 
                     {/* Right Panel */}
-                    <div className="lg:sticky lg:top-36">
+                    <div className="md:sticky md:top-36">
                        <AnimatePresence>
                          {pastedText.trim() ? (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, Fragment, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../contexts/DataContext';
@@ -8,6 +7,7 @@ import KpiCard from '../ui/KpiCard';
 import { ReconciledSale, LocalFiltersState } from '../../types';
 import { BanknotesIcon, ChartBarIcon, TrophyIcon, DocumentMagnifyingGlassIcon, ChevronUpIcon, ChevronDownIcon, CheckCircleIcon, ExclamationTriangleIcon, LinkIcon, XCircleIcon, QuestionMarkCircleIcon, ChevronRightIcon, ArrowLeftIcon } from '../ui/Icons';
 import AnimatedCounter from '../ui/AnimatedCounter';
+import SegmentedControl from '../ui/SegmentedControl';
 
 // --- Type Definitions ---
 interface AugmentedInvoiceGroup {
@@ -146,12 +146,12 @@ interface ProfitReconciliationPageProps {
 }
 
 const ProfitReconciliationPage: React.FC<ProfitReconciliationPageProps> = ({ localFilters, setLocalFilters }) => {
-    const { reconciledSales } = useData();
+    const { reconciledSales, profitabilityKpiData } = useData();
     // Desktop state
     const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'invoiceDate', direction: 'desc' });
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(15);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     // Mobile drill-down state
     const [selectedInvoice, setSelectedInvoice] = useState<AugmentedInvoiceGroup | null>(null);
     const [selectedItem, setSelectedItem] = useState<ReconciledSale | null>(null);
@@ -226,13 +226,12 @@ const ProfitReconciliationPage: React.FC<ProfitReconciliationPageProps> = ({ loc
     const averageMargin = kpis.totalRevenue > 0 ? (kpis.totalProfit / kpis.totalRevenue) * 100 : 0;
 
     const invoiceGroups: AugmentedInvoiceGroup[] = useMemo(() => {
-        // FIX: Explicitly type `grouped` accumulator to fix type inference issue.
-        const grouped = filteredData.reduce<Record<string, ReconciledSale[]>>((acc, sale: ReconciledSale) => {
+        const grouped = (filteredData as ReconciledSale[]).reduce((acc: Record<string, ReconciledSale[]>, sale: ReconciledSale) => {
             const key = sale.invoiceNumber;
             if (!acc[key]) acc[key] = [];
             acc[key].push(sale);
             return acc;
-        }, {});
+        }, {} as Record<string, ReconciledSale[]>);
         
         return Object.entries(grouped).map(([invoiceNumber, items]) => ({
             invoiceNumber, items,
@@ -291,11 +290,11 @@ const ProfitReconciliationPage: React.FC<ProfitReconciliationPageProps> = ({ loc
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <ProfitKpiCard label="Total Reconciled Profit" value={kpis.totalProfit} icon={BanknotesIcon} formatter={currencyFormatter} isPrimary />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <ProfitKpiCard label="Average Profit Margin" value={averageMargin} icon={ChartBarIcon} formatter={percentFormatter} />
-                    <ProfitKpiCard label="Total Rebates Applied" value={kpis.totalRebatesApplied} icon={TrophyIcon} formatter={currencyFormatter} />
+                    <ProfitKpiCard label="Total Rebates Applied" value={kpis.totalRebates} icon={TrophyIcon} formatter={currencyFormatter} />
                     <ProfitKpiCard label="Sales with Rebates" value={kpis.salesWithRebates} icon={TrophyIcon} />
                     <ProfitKpiCard label="Sales with Issues" value={kpis.salesWithIssues} icon={ExclamationTriangleIcon} />
                 </div>
@@ -351,7 +350,14 @@ const ProfitReconciliationPage: React.FC<ProfitReconciliationPageProps> = ({ loc
                         </div>
                         <div className="flex items-center space-x-2">
                             <label htmlFor="items-per-page-select" className="text-sm text-secondary-text dark:text-dark-secondary-text">Rows:</label>
-                            <select id="items-per-page-select" value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1 px-2 text-primary-text dark:text-dark-primary-text text-sm focus:ring-highlight focus:border-highlight"><option value="15">15</option><option value="30">30</option><option value="50">50</option></select>
+                            <select id="items-per-page-select" value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1 px-2 text-primary-text dark:text-dark-primary-text text-sm focus:ring-highlight focus:border-highlight">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="200">200</option>
+                                <option value="500">500</option>
+                            </select>
                             <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                                 <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text hover:bg-gray-100 dark:hover:bg-dark-primary-bg disabled:opacity-50 transition-colors">Previous</button>
                                 <span className="relative inline-flex items-center px-4 py-2 border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text">{currentPage} / {totalPages}</span>

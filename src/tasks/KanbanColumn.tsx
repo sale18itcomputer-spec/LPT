@@ -29,7 +29,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ status, tasks, draggedTask,
             onDragOver={(e) => onDragOver(e, status)}
             onDrop={(e) => onDrop(e, status)}
             onDragLeave={onDragLeave}
-            className={`w-full md:w-80 lg:w-96 flex-shrink-0 flex flex-col transition-colors duration-300 ease-in-out bg-gray-100/50 dark:bg-dark-secondary-bg/20 rounded-xl ${isDraggingOver ? 'bg-blue-100/50 dark:bg-blue-900/10' : ''}`}
+            className={`w-full sm:w-80 flex-shrink-0 flex flex-col transition-colors duration-300 ease-in-out bg-gray-100/50 dark:bg-dark-secondary-bg/20 rounded-xl ${isDraggingOver ? 'bg-blue-100/50 dark:bg-blue-900/10' : ''}`}
         >
             <div className="p-3 flex justify-between items-center flex-shrink-0">
                 <div className="flex items-center gap-2">

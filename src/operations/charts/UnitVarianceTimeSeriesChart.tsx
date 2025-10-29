@@ -1,3 +1,4 @@
+
 import React, { useMemo, useContext, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
@@ -21,7 +22,7 @@ const UnitVarianceTimeSeriesChart: React.FC<ChartProps> = React.memo(({ orders, 
     useEffect(() => {
         const timer = setTimeout(() => {
             chartRef.current?.getEchartsInstance().resize();
-        }, 100);
+        }, 150);
         return () => clearTimeout(timer);
     }, []);
     
@@ -138,6 +139,7 @@ const UnitVarianceTimeSeriesChart: React.FC<ChartProps> = React.memo(({ orders, 
             yAxisIndex: s.type === 'line' ? 1 : 0,
             lineStyle: s.type === 'line' ? { width: 3 } : undefined,
             showSymbol: false,
+            barWidth: s.type === 'bar' ? '20%' : undefined,
         })),
         color: ['#3B82F6', '#10B981', '#F97316'],
     }), [chartData, isDark, isDense, labelColor, gridBorderColor]);

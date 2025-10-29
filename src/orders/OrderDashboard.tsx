@@ -14,6 +14,7 @@ import OrderTable from '../OrderTable';
 import { ArrowUpIcon, FunnelIcon, XMarkIcon, ChartBarIcon } from '../ui/Icons';
 import { INITIAL_LOCAL_FILTERS } from '../../constants';
 import { calculateDatesForPreset, toYYYYMMDD } from '../../utils/dateHelpers';
+import ShipmentGanttChart from './ShipmentGanttChart';
 
 interface OrderDashboardProps {
     onRowClick: (order: Order) => void;
@@ -202,13 +203,20 @@ const OrderDashboard: React.FC<OrderDashboardProps> = ({ onRowClick, onNavigateA
                 <OrderKpiCards kpiData={orderKpiData} />
             </motion.div>
             
-            <motion.div initial="hidden" animate="visible" variants={containerVariants}>
-                <ChartCard title="Order Value Trend" description="Monthly value of orders by Order Receipt Date." className="h-[400px]">
-                    <OrderValueTrendChart
-                        orders={locallyFilteredOrders}
-                        selectedPeriodKey={selectedPeriodKey}
-                    />
-                </ChartCard>
+            <motion.div initial="hidden" animate="visible" variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                <motion.div variants={itemVariants}>
+                    <ChartCard title="Order Value Trend" description="Monthly value of orders by Order Receipt Date." className="h-[500px]">
+                        <OrderValueTrendChart
+                            orders={locallyFilteredOrders}
+                            selectedPeriodKey={selectedPeriodKey}
+                        />
+                    </ChartCard>
+                </motion.div>
+                <motion.div variants={itemVariants}>
+                     <ChartCard title="Planned vs Actual Shipment" description="Compares PI-to-Ship (planned) vs PI-to-Arrival (actual) for recent orders." className="h-[500px]">
+                        <ShipmentGanttChart orders={locallyFilteredOrders} />
+                    </ChartCard>
+                </motion.div>
             </motion.div>
             
             <motion.div 

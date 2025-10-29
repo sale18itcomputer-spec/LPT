@@ -1,4 +1,5 @@
-import React, { useContext, useMemo } from 'react';
+
+import React, { useContext, useMemo, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { DocumentMagnifyingGlassIcon } from '../ui/Icons';
@@ -17,11 +18,20 @@ interface SurplusStockChartProps {
 
 const SurplusStockChart: React.FC<SurplusStockChartProps> = React.memo(({ surplusItems }) => {
     const themeContext = useContext(ThemeContext);
+    const chartRef = useRef<ReactECharts>(null);
     const isDark = themeContext?.theme === 'dark';
 
     const labelColor = isDark ? '#d4d4d8' : '#4B5563';
     const dataLabelColor = isDark ? '#f9fafb' : '#1F2937';
     const gridBorderColor = isDark ? '#3f3f46' : '#E5E7EB';
+    
+    // Force resize on mount to fix rendering issues inside flex/grid containers
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            chartRef.current?.getEchartsInstance().resize();
+        }, 150);
+        return () => clearTimeout(timer);
+    }, []);
 
     if (surplusItems.length === 0) {
         return (
@@ -73,7 +83,7 @@ const SurplusStockChart: React.FC<SurplusStockChartProps> = React.memo(({ surplu
             name: 'In Stock',
             type: 'bar',
             data: sortedItems.map(item => item.inStockQty),
-            barWidth: '60%',
+            barWidth: '25%',
             itemStyle: {
                 borderRadius: 4,
                 color: {
@@ -115,6 +125,7 @@ const SurplusStockChart: React.FC<SurplusStockChartProps> = React.memo(({ surplu
     return (
         <div aria-label="Surplus stock chart" role="figure" tabIndex={0}>
             <ReactECharts
+                ref={chartRef}
                 option={options}
                 style={{ height: '100%', width: '100%' }}
                 notMerge={true}

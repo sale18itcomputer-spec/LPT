@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, Fragment, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Sale, DashboardType } from '../../types';
@@ -71,7 +72,7 @@ interface SalesTableProps {
 const SalesTable: React.FC<SalesTableProps> = ({ sales }) => {
   const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'invoiceDate', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(new Set());
   const itemsPerPageId = useId();
 
@@ -236,7 +237,14 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales }) => {
             <div><p className="text-sm text-secondary-text dark:text-dark-secondary-text">Showing <span className="font-medium">{Math.min((currentPage - 1) * itemsPerPage + 1, sortedInvoices.length)}</span> to <span className="font-medium">{Math.min(currentPage * itemsPerPage, sortedInvoices.length)}</span> of <span className="font-medium">{sortedInvoices.length}</span> invoices</p></div>
             <div className="flex items-center space-x-2">
                 <label htmlFor={itemsPerPageId} className="text-sm text-secondary-text dark:text-dark-secondary-text">Rows:</label>
-                <select id={itemsPerPageId} value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1 px-2 text-primary-text dark:text-dark-primary-text text-sm focus:ring-highlight focus:border-highlight"><option value="15">15</option><option value="30">30</option><option value="50">50</option></select>
+                <select id={itemsPerPageId} value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1 px-2 text-primary-text dark:text-dark-primary-text text-sm focus:ring-highlight focus:border-highlight">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                </select>
                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"><button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text hover:bg-gray-50 dark:hover:bg-dark-primary-bg disabled:opacity-50">Prev</button><span className="relative inline-flex items-center px-4 py-2 border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text">{currentPage} / {totalPages}</span><button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text hover:bg-gray-50 dark:hover:bg-dark-primary-bg disabled:opacity-50">Next</button></nav>
             </div>
         </div>

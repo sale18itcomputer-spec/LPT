@@ -154,7 +154,7 @@
       position: fixed;
       inset: 0;
       z-index: 9999;
-      background-color: #F9FAFB; /* zinc-50 / primary-bg */
+      background-color: #f8fafc; /* slate-50 */
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -166,7 +166,7 @@
       margin-bottom: 2rem;
     }
     .dark #loader {
-      background-color: #18181b; /* zinc-900 / dark-primary-bg */
+      background-color: #0f172a; /* slate-900 */
     }
     #loader.hidden {
       opacity: 0;
@@ -178,7 +178,7 @@
     #loader .spinner {
       width: 48px;
       height: 48px;
-      border: 5px solid #e4e4e7; /* zinc-200 / border-color */
+      border: 5px solid #e2e8f0; /* slate-200 */
       border-bottom-color: #4f46e5; /* indigo-600 / highlight */
       border-radius: 50%;
       display: inline-block;
@@ -187,16 +187,16 @@
       margin-bottom: 1rem;
     }
     .dark #loader .spinner {
-        border-color: #3f3f46; /* zinc-700 / dark-border-color */
+        border-color: #334155; /* slate-700 */
         border-bottom-color: #4f46e5; /* highlight */
     }
     #loader p {
-      color: #18181b; /* zinc-900 / primary-text */
+      color: #0f172a; /* slate-900 */
       font-size: 1.125rem;
       font-weight: 500;
     }
     .dark #loader p {
-        color: #f9fafb; /* zinc-50 / dark-primary-text */
+        color: #f1f5f9; /* slate-100 */
     }
     @keyframes rotation {
       0% {
@@ -284,7 +284,10 @@
     "echarts": "https://esm.sh/echarts@5.5.0",
     "echarts/": "https://esm.sh/echarts@5.5.0/",
     "echarts-for-react": "https://esm.sh/echarts-for-react@3.0.2?external=react,echarts",
-    "papaparse": "https://esm.sh/papaparse@5.4.1"
+    "papaparse": "https://esm.sh/papaparse@5.4.1",
+    "lodash": "https://esm.sh/lodash-es@4.17.21",
+    "lodash/": "https://esm.sh/lodash-es@4.17.21/",
+    "recharts": "https://esm.sh/recharts@2.12.7?external=react,react-dom"
   }
 }
 </script>
@@ -297,22 +300,22 @@
             'fluid': 'repeat(auto-fit, minmax(320px, 1fr))',
           },
           colors: {
-            // Light Theme (Refined)
-            'primary-bg': '#F9FAFB',      // zinc-50
-            'secondary-bg': '#FFFFFF',    // white
-            'primary-text': '#18181b',    // zinc-900
-            'secondary-text': '#71717a',  // zinc-500
-            'border-color': '#e4e4e7',    // zinc-200
+            // Light Theme (Slate)
+            'primary-bg': '#f8fafc',      // slate-50
+            'secondary-bg': '#ffffff',    // white
+            'primary-text': '#0f172a',    // slate-900
+            'secondary-text': '#64748b',  // slate-500
+            'border-color': '#e2e8f0',    // slate-200
             'highlight': '#4f46e5',      // indigo-600
             'highlight-hover': '#eef2ff', // indigo-50
 
-            // Dark Theme (Refined)
-            'dark-primary-bg': '#18181b',      // zinc-900
-            'dark-secondary-bg': '#27272a',    // zinc-800
-            'dark-primary-text': '#f9fafb',    // zinc-50
-            'dark-secondary-text': '#d4d4d8',  // zinc-300 (increased contrast)
-            'dark-border-color': '#3f3f46',    // zinc-700
-            'dark-highlight-hover': 'rgba(99, 102, 241, 0.15)', // indigo-500 with 15% opacity
+            // Dark Theme (Slate)
+            'dark-primary-bg': '#0f172a',      // slate-900
+            'dark-secondary-bg': '#1e293b',    // slate-800
+            'dark-primary-text': '#f1f5f9',    // slate-100
+            'dark-secondary-text': '#94a3b8',  // slate-400
+            'dark-border-color': '#334155',    // slate-700
+            'dark-highlight-hover': 'rgba(99, 102, 241, 0.15)',
             
             // Shared Accent Colors
             'accent-start': '#E0F2FE',
@@ -320,13 +323,6 @@
             'order-placed': '#3B82F6',
             'order-delivered': '#16A34A',
             'order-pending': '#F59E0B',
-            
-            // Filter Pill Colors (Refined)
-            'pill-year-bg': '#eef2ff', 'pill-year-text': '#3730a3', 'pill-year-border': '#c7d2fe', // Indigo
-            'pill-product-bg': '#f5f3ff', 'pill-product-text': '#6d28d9', 'pill-product-border': '#ddd6fe', // Violet
-            'pill-status-bg': '#fffbeb', 'pill-status-text': '#b45309', 'pill-status-border': '#fde68a', // Amber
-            'pill-buyer-bg': '#ecfdf5', 'pill-buyer-text': '#065f46', 'pill-buyer-border': '#a7f3d0', // Green
-            'pill-segment-bg': '#fee2e2', 'pill-segment-text': '#991b1b', 'pill-segment-border': '#fecaca', // Red
           },
           boxShadow: {
             'glow': '0 0 0 3px rgba(79, 70, 229, 0.3)',

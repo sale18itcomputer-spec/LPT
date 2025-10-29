@@ -9,6 +9,7 @@ import { RebateProgram, RebateDetail, RebateSale, LocalFiltersState } from '../.
 import { BanknotesIcon, ExclamationTriangleIcon, TrophyIcon, DocumentMagnifyingGlassIcon, ChevronUpIcon, ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon, ArrowDownTrayIcon } from '../ui/Icons';
 import RebateDetailTable from './RebateDetailTable';
 import { exportDataToCsv } from '../../utils/csv';
+import RebateSalesTable from './RebateSalesTable';
 
 // --- Type Definitions ---
 type AugmentedRebateProgram = RebateProgram & {
@@ -96,7 +97,7 @@ export const RebateProgramsPage: React.FC<RebateProgramsPageProps> = ({ localFil
     const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'startDate', direction: 'desc' });
     const [expandedProgram, setExpandedProgram] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(15);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     // Mobile drill-down state
     const [selectedProgram, setSelectedProgram] = useState<AugmentedRebateProgram | null>(null);
     const [selectedMtm, setSelectedMtm] = useState<RebateDetailWithCalculations | null>(null);
@@ -439,3 +440,70 @@ export const RebateProgramsPage: React.FC<RebateProgramsPageProps> = ({ localFil
                                             <div className="p-4">
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-lg text-primary-text dark:text-dark-primary-text">{item.program}</p>
+                                                        <p className="text-sm text-secondary-text dark:text-dark-secondary-text mt-1">{item.lenovoQuarter}</p>
+                                                    </div>
+                                                    <ChevronRightIcon className="h-6 w-6 text-secondary-text" />
+                                                </div>
+                                                <div className="mt-4 grid grid-cols-2 gap-4 text-center border-t border-border-color dark:border-dark-border-color pt-3">
+                                                    <div><p className="text-xs text-secondary-text dark:text-dark-secondary-text">Tracked Sales</p><p className="font-bold text-primary-text dark:text-dark-primary-text">{item.totalTrackedSales.toLocaleString()}</p></div>
+                                                    <div><p className="text-xs text-secondary-text dark:text-dark-secondary-text">Potential Rebate</p><p className="font-bold text-green-600">{currencyFormatter(item.totalPotentialRebate)}</p></div>
+                                                </div>
+                                                <div className="mt-3 flex justify-center gap-2"><StatusBadge status={item.status} /><UpdateBadge update={item.update} /></div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </motion.div>
+                            )}
+                            {selectedProgram && !selectedMtm && (
+                                <motion.div key="details" custom={direction} variants={viewVariants} initial="enter" animate="center" exit="exit" transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }} className="absolute w-full">
+                                    <div className="pb-4 mb-4 border-b border-border-color dark:border-dark-border-color"><button onClick={handleBack} className="flex items-center text-sm font-medium text-highlight mb-2"><ChevronLeftIcon className="h-4 w-4 mr-1" /> Back to Programs</button><h2 className="text-xl font-bold text-primary-text dark:text-dark-primary-text">{selectedProgram.program}</h2><p className="text-sm text-secondary-text dark:text-dark-secondary-text">Select an MTM for sales details</p></div>
+                                    <div className="space-y-3">
+                                        {mtmsForSelectedProgram.map(item => {
+                                            const varianceColor = item.variance > 0 ? 'text-green-600' : item.variance < 0 ? 'text-red-600' : 'text-secondary-text';
+                                            return (
+                                                <Card key={item.mtm} className="p-3" onClick={() => handleSelectMtm(item)}>
+                                                    <div className="flex justify-between items-center"><p className="font-mono text-sm text-primary-text dark:text-dark-primary-text">{item.mtm}</p><p className="font-semibold text-green-600">{currencyFormatter(item.potentialRebate)}</p><ChevronRightIcon className="h-5 w-5 text-secondary-text" /></div>
+                                                    <div className="grid grid-cols-3 text-xs mt-2 pt-2 border-t text-center">
+                                                        <div><span className="text-secondary-text">Tracked: </span><span className="font-medium">{item.trackedSalesQty}</span></div>
+                                                        <div><span className="text-secondary-text">Reported: </span><span className="font-medium">{item.programReportedLPH || 0}</span></div>
+                                                        <div><span className="text-secondary-text">Variance: </span><span className={`font-medium ${varianceColor}`}>{item.variance}</span></div>
+                                                    </div>
+                                                </Card>
+                                            )
+                                        })}
+                                    </div>
+                                </motion.div>
+                            )}
+                            {selectedMtm && (
+                                <motion.div key="sales" custom={direction} variants={viewVariants} initial="enter" animate="center" exit="exit" transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }} className="absolute w-full">
+                                     <div className="pb-4 mb-4 border-b border-border-color dark:border-dark-border-color"><button onClick={handleBack} className="flex items-center text-sm font-medium text-highlight mb-2"><ChevronLeftIcon className="h-4 w-4 mr-1" /> Back to MTMs</button><h2 className="text-xl font-bold text-primary-text dark:text-dark-primary-text">Sales for {selectedMtm.mtm}</h2></div>
+                                     <RebateSalesTable sales={salesForSelectedMtm} rebateDetails={allRebateDetails} programPerUnit={null}/>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="py-3 flex flex-col sm:flex-row items-center justify-center sm:justify-between border-t border-border-color dark:border-dark-border-color mt-4 gap-4">
+                            <div><p className="text-sm text-secondary-text dark:text-dark-secondary-text">Showing <span className="font-medium">{Math.min((currentPage - 1) * itemsPerPage + 1, sortedAndFilteredData.length)}</span> to <span className="font-medium">{Math.min(currentPage * itemsPerPage, sortedAndFilteredData.length)}</span> of <span className="font-medium">{sortedAndFilteredData.length}</span> programs</p></div>
+                            <div className="flex items-center space-x-2">
+                                <label htmlFor="items-per-page-select" className="text-sm text-secondary-text dark:text-dark-secondary-text">Rows:</label>
+                                <select id="items-per-page-select" value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1 px-2 text-primary-text dark:text-dark-primary-text text-sm focus:ring-highlight focus:border-highlight">
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                    <option value="200">200</option>
+                                    <option value="500">500</option>
+                                </select>
+                                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"><button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text hover:bg-gray-100 dark:hover:bg-dark-primary-bg disabled:opacity-50">Prev</button><span className="relative inline-flex items-center px-4 py-2 border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text">{currentPage} / {totalPages}</span><button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-secondary-text dark:text-dark-secondary-text hover:bg-gray-100 dark:hover:bg-dark-primary-bg disabled:opacity-50">Next</button></nav>
+                            </div>
+                        </div>
+                    )}
+                </Card>
+            </motion.div>
+        </main>
+    );
+};

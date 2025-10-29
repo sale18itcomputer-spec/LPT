@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+
+import React, { useMemo, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 
@@ -7,6 +8,16 @@ interface SparklineProps {
 }
 
 const Sparkline: React.FC<SparklineProps> = React.memo(({ data }) => {
+  const chartRef = useRef<ReactECharts>(null);
+
+  // Force resize on mount to fix rendering issues inside flex/grid containers
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        chartRef.current?.getEchartsInstance().resize();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
+  
   if (!data || data.length < 2) {
     return <div className="h-8 w-24 flex items-center justify-center text-xs text-secondary-text">-</div>;
   }
@@ -66,6 +77,7 @@ const Sparkline: React.FC<SparklineProps> = React.memo(({ data }) => {
   return (
     <div className="w-24 h-8" title={`Last 90 days sales trend. Most recent week: ${lastSale} units.`} aria-label={`Sales trend sparkline, most recent week sold ${lastSale} units.`} role="img">
       <ReactECharts
+        ref={chartRef}
         option={options}
         style={{ height: '100%', width: '100%' }}
         notMerge={true}

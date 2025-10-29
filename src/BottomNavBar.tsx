@@ -67,7 +67,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeView, setActiveView, 
   ];
 
   return (
-    <nav className="h-16 bg-secondary-bg/80 dark:bg-dark-secondary-bg/80 backdrop-blur-lg border-t border-border-color dark:border-dark-border-color shadow-[0_-2px_10px_rgba(0,0,0,0.05)]"
+    <nav className="h-16 bg-secondary-bg/80 dark:bg-dark-secondary-bg/80 backdrop-blur-lg border-t border-black/5 dark:border-white/10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex justify-around items-stretch h-full">

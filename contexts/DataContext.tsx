@@ -214,7 +214,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (item.fullSerializedString) serialToSerializedItemMap.set(item.fullSerializedString.toUpperCase(), item);
         });
 
-        const soMtmToOrderMap = new Map(allOrders.map((order: Order) => [`${order.salesOrder}-${order.mtm}`, order]));
+        // FIX: Explicitly type the Map to ensure correct type inference for `order` later.
+        const soMtmToOrderMap = new Map<string, Order>((allOrders as Order[]).map((order: Order) => [`${order.salesOrder}-${order.mtm}`, order]));
         
         const shipmentCostMap = new Map<string, number>();
         allShipments.forEach(s => shipmentCostMap.set(`${s.salesOrder}-${s.mtm}`, s.shippingCost));
@@ -227,7 +228,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (rebateSale.serialNumber) rebateSalesBySerialMap.set(rebateSale.serialNumber.toUpperCase(), rebateSale);
         });
         
-        const sales: ReconciledSale[] = allSales.map(sale => {
+        const sales: ReconciledSale[] = (allSales as Sale[]).map(sale => {
             const serializedItem = serialToSerializedItemMap.get(sale.serialNumber.toUpperCase());
             const salesOrder = serializedItem?.salesOrder;
             const orderKey = salesOrder ? `${salesOrder}-${sale.lenovoProductNumber}` : '';
@@ -343,17 +344,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [allSales, allOrders, allSerializedItems, allRebateDetails, allRebateSales, allShipments, allBackpackCosts]);
 
     const orderKpiData = useMemo((): OrderKpiData | undefined => {
-        if (allOrders.length === 0) return undefined;
-        const kpiAccumulator = allOrders.reduce((acc, order: Order) => {
+        // FIX: Cast `allOrders` to `Order[]` to resolve type inference issues with `reduce`.
+        if ((allOrders as Order[]).length === 0) return undefined;
+        const kpiAccumulator = (allOrders as Order[]).reduce((acc, order: Order) => {
             acc.totalOrders++; acc.totalUnits += order.qty; acc.totalLandingCostValue += order.landingCostUnitPrice * order.qty; acc.totalFobValue += order.orderValue; if (order.isDelayedProduction || order.isDelayedTransit) acc.delayedOrdersCount++; if (order.isAtRisk) acc.atRiskOrdersCount++; if (!order.actualArrival) { acc.openUnits += order.qty; acc.backlogValue += order.orderValue; }
             if (order.dateIssuePI && order.actualArrival) { const leadTime = (new Date(order.actualArrival).getTime() - new Date(order.dateIssuePI).getTime()) / (1000 * 60 * 60 * 24); if (leadTime >= 0) { acc.totalLeadTime += leadTime; acc.leadTimeOrderCount++; } }
             return acc;
         }, { totalLandingCostValue: 0, totalFobValue: 0, openUnits: 0, delayedOrdersCount: 0, totalOrders: 0, totalUnits: 0, backlogValue: 0, atRiskOrdersCount: 0, totalLeadTime: 0, leadTimeOrderCount: 0 });
         
-        const uniqueOrderCount = new Set(allOrders.map(o => o.salesOrder)).size;
+        // FIX: Cast `allOrders` to `Order[]` to resolve type inference issues with `map`.
+        const uniqueOrderCount = new Set((allOrders as Order[]).map(o => o.salesOrder)).size;
         const avgOrderValue = uniqueOrderCount > 0 ? kpiAccumulator.totalFobValue / uniqueOrderCount : 0;
         
-        const onTimeEligibleOrders = allOrders.filter(o => o.eta && o.actualArrival);
+        // FIX: Cast `allOrders` to `Order[]` to resolve type inference issues with `filter`.
+        const onTimeEligibleOrders = (allOrders as Order[]).filter(o => o.eta && o.actualArrival);
         const onTimeArrivals = onTimeEligibleOrders.filter(o => o.actualArrival! <= o.eta!).length;
         
         return {
@@ -366,9 +370,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [allOrders]);
     
     const salesKpiData = useMemo((): SalesKpiData | undefined => {
-        if (allSales.length === 0) return undefined;
-        const uniqueInvoices = new Set(allSales.map((s: Sale) => s.invoiceNumber));
-        const kpi = allSales.reduce((acc, sale: Sale) => {
+        // FIX: Cast `allSales` to `Sale[]` to resolve type inference issues.
+        if ((allSales as Sale[]).length === 0) return undefined;
+        const uniqueInvoices = new Set((allSales as Sale[]).map((s: Sale) => s.invoiceNumber));
+        const kpi = (allSales as Sale[]).reduce((acc, sale: Sale) => {
             acc.totalRevenue += sale.totalRevenue;
             acc.totalUnits += sale.quantity;
             return acc;
@@ -377,7 +382,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         kpi.invoiceCount = uniqueInvoices.size;
         kpi.averageSalePricePerUnit = kpi.totalUnits > 0 ? kpi.totalRevenue / kpi.totalUnits : 0;
         kpi.averageRevenuePerInvoice = kpi.invoiceCount > 0 ? kpi.totalRevenue / kpi.invoiceCount : 0;
-        kpi.uniqueBuyersCount = new Set(allSales.map((s: Sale) => s.buyerId)).size;
+        // FIX: Cast `allSales` to `Sale[]` to resolve type inference issues with `map`.
+        kpi.uniqueBuyersCount = new Set((allSales as Sale[]).map((s: Sale) => s.buyerId)).size;
         const totalProfit = reconciledSales.reduce((sum, sale) => sum + (sale.unitProfit || 0), 0);
         kpi.totalProfit = totalProfit;
         kpi.averageGrossMargin = kpi.totalRevenue > 0 ? (totalProfit / kpi.totalRevenue) * 100 : 0;
@@ -386,42 +392,47 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 
     const staticYears = useMemo(() => {
-        return [...new Set([...allOrders.map(o => o.dateIssuePI ? new Date(o.dateIssuePI).getUTCFullYear() : null), ...allSales.map(s => s.invoiceDate ? new Date(s.invoiceDate).getUTCFullYear() : null)])]
+        // FIX: Cast `allOrders` and `allSales` to their respective array types.
+        return [...new Set([...(allOrders as Order[]).map(o => o.dateIssuePI ? new Date(o.dateIssuePI).getUTCFullYear() : null), ...(allSales as Sale[]).map(s => s.invoiceDate ? new Date(s.invoiceDate).getUTCFullYear() : null)])]
         .filter((y): y is number => y !== null).sort((a, b) => b - a).map(String);
     }, [allOrders, allSales]);
 
     const orderFilterOptions = useMemo((): FilterOptions => {
+        // FIX: Explicitly type `data` to resolve inference issues.
         const getUniqueSorted = <T, K extends keyof T>(data: T[], key: K): string[] =>
-            [...new Set(data.map(item => String(item[key] ?? '')))].filter(val => val && val !== 'N/A').sort();
+            [...new Set((data as any[]).map(item => String(item[key] ?? '')))].filter(val => val && val !== 'N/A').sort();
 
-        const staticOrderQuarters = [...new Set(allOrders.map(o => {
+        const staticOrderQuarters = [...new Set((allOrders as Order[]).map(o => {
             if (!o.dateIssuePI) return null;
             const month = new Date(o.dateIssuePI).getUTCMonth();
             return `Q${Math.floor(month / 3) + 1}`;
         }).filter((q): q is string => q !== null))].sort();
 
         return {
-            mtms: getUniqueSorted(allOrders, 'mtm'),
-            factoryToSgps: getUniqueSorted(allOrders, 'factoryToSgp'),
-            statuses: getUniqueSorted(allOrders, 'status'),
+            // FIX: Cast `allOrders` to `Order[]` when calling `getUniqueSorted`.
+            mtms: getUniqueSorted(allOrders as Order[], 'mtm'),
+            factoryToSgps: getUniqueSorted(allOrders as Order[], 'factoryToSgp'),
+            statuses: getUniqueSorted(allOrders as Order[], 'status'),
             years: staticYears,
             quarters: staticOrderQuarters,
         };
     }, [allOrders, staticYears]);
 
     const salesFilterOptions = useMemo((): SaleFilterOptions => {
+        // FIX: Explicitly type `data` to resolve inference issues.
         const getUniqueSorted = <T, K extends keyof T>(data: T[], key: K): string[] =>
-            [...new Set(data.map(item => String(item[key] ?? '')))].filter(val => val && val !== 'N/A').sort();
+            [...new Set((data as any[]).map(item => String(item[key] ?? '')))].filter(val => val && val !== 'N/A').sort();
             
-        const staticSalesQuarters = [...new Set(allSales.map(s => {
+        const staticSalesQuarters = [...new Set((allSales as Sale[]).map(s => {
             if (!s.invoiceDate) return null;
             const month = new Date(s.invoiceDate).getUTCMonth();
             return `Q${Math.floor(month / 3) + 1}`;
         }).filter((q): q is string => q !== null))].sort();
 
         return {
-            segments: getUniqueSorted(allSales, 'segment'),
-            buyers: getUniqueSorted(allSales, 'buyerName'),
+            // FIX: Cast `allSales` to `Sale[]` when calling `getUniqueSorted`.
+            segments: getUniqueSorted(allSales as Sale[], 'segment'),
+            buyers: getUniqueSorted(allSales as Sale[], 'buyerName'),
             quarters: staticSalesQuarters,
             years: staticYears,
         };
@@ -429,7 +440,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     const orderInfoMap = useMemo(() => {
         const map = new Map<string, { modelName: string }>();
-        allOrders.forEach(order => {
+        (allOrders as Order[]).forEach(order => {
             const key = `${order.salesOrder}-${order.mtm}`;
             if (!map.has(key)) {
                 map.set(key, { modelName: order.modelName });
@@ -440,7 +451,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     const allShipmentGroups: AugmentedShipmentGroup[] = useMemo(() => {
         const orderPriceMap = new Map<string, number>();
-        allOrders.forEach(order => {
+        (allOrders as Order[]).forEach(order => {
             orderPriceMap.set(`${order.salesOrder}-${order.mtm}`, order.fobUnitPrice);
         });
         // 1. Process shipments from the 'Shipments' sheet (SG > KH)
@@ -505,7 +516,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         // 3. Group upcoming shipments from 'Orders' sheet (CN -> SG)
-        const upcomingOrdersByDeliveryNum = allOrders
+        const upcomingOrdersByDeliveryNum = (allOrders as Order[])
             .filter(order => order.deliveryNumber && !order.actualArrival && !shippedOrderItems.has(`${order.salesOrder}-${order.mtm}`))
             .reduce((acc, order) => {
                 if (!acc[order.deliveryNumber!]) acc[order.deliveryNumber!] = [];
@@ -568,19 +579,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [allShipments, allOrders, orderInfoMap]);
     
     const derivedData = useMemo(() => {
-        if (isOrdersLoading || isSalesLoading || !allOrders.length) {
+        // FIX: Cast `allOrders` to `Order[]` to resolve type inference issues.
+        if (isOrdersLoading || isSalesLoading || !(allOrders as Order[]).length) {
             return { inventoryData: [], customerData: [], backorderRecommendations: [], customerOpportunities: [], promotionCandidates: [], newModelMtms: new Set<string>(), salesMetricsByMtm: new Map() };
         }
         const timestamp = new Date().toISOString();
         const now = new Date();
         const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-        const salesMetricsByMtm = getSalesMetricsByMtm(allSales);
-        const inventoryStatus = calculateInventoryStatus(allOrders, allSales, allSerializedItems);
-        const firstOrderDates = getFirstOrderDates(allOrders);
+        const salesMetricsByMtm = getSalesMetricsByMtm(allSales as Sale[]);
+        const inventoryStatus = calculateInventoryStatus(allOrders as Order[], allSales as Sale[], allSerializedItems);
+        const firstOrderDates = getFirstOrderDates(allOrders as Order[]);
 
         const modelFirstOrderDate = new Map<string, Date>();
-        for (const order of allOrders) {
+        // FIX: Cast `allOrders` to `Order[]` to resolve type inference issues.
+        for (const order of (allOrders as Order[])) {
             if (order.dateIssuePI) {
                 const orderDate = new Date(order.dateIssuePI);
                 if (!modelFirstOrderDate.has(order.mtm) || orderDate < modelFirstOrderDate.get(order.mtm)!) {
@@ -597,16 +610,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         }
         
-        const backorderRecommendations: BackorderRecommendation[] = analyzeBackorderCandidates(inventoryStatus, allSales, firstOrderDates, newModelMtms);
+        const backorderRecommendations: BackorderRecommendation[] = analyzeBackorderCandidates(inventoryStatus, allSales as Sale[], firstOrderDates, newModelMtms);
 
-        const otwValueByMtm = allOrders.reduce((acc, order) => {
+        // FIX: Cast `allOrders` to `Order[]` to resolve type inference issues.
+        const otwValueByMtm = (allOrders as Order[]).reduce((acc, order) => {
             if (!order.actualArrival) { // It's "on the way"
                 acc.set(order.mtm, (acc.get(order.mtm) || 0) + order.orderValue);
             }
             return acc;
         }, new Map<string, number>());
         
-        const salesByMtm = allSales.reduce((acc, sale) => {
+        // FIX: Cast `allSales` to `Sale[]` to resolve type inference issues.
+        const salesByMtm = (allSales as Sale[]).reduce((acc, sale) => {
             const mtm = sale.lenovoProductNumber;
             if (!acc[mtm]) acc[mtm] = [];
             acc[mtm].push(sale);
@@ -625,7 +640,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         const inventory: InventoryItem[] = Array.from(inventoryStatus.values()).map(item => {
-            const recentSales = allSales
+            const recentSales = (allSales as Sale[])
                 .filter(s => s.lenovoProductNumber === item.mtm && s.invoiceDate && new Date(s.invoiceDate) >= new Date(Date.now() - 90 * 24 * 60 * 60 * 1000));
             const totalRecentSales = recentSales.reduce((sum, s) => sum + s.quantity, 0);
             const weeklyRunRate = totalRecentSales > 0 ? totalRecentSales / (90 / 7) : 0;
@@ -670,7 +685,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         const promotionCandidates: PromotionCandidate[] = analyzePromotionCandidates(inventory);
 
-        const customersById = allSales.reduce<Record<string, CustomerAccumulator>>((acc, sale) => {
+        const customersById = (allSales as Sale[]).reduce<Record<string, CustomerAccumulator>>((acc, sale) => {
             if (!acc[sale.buyerId]) {
                 acc[sale.buyerId] = {
                     id: sale.buyerId, name: sale.buyerName, totalRevenue: 0, totalUnits: 0,
@@ -692,13 +707,27 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const ninetyDaysAgo = new Date(today.getTime());
         ninetyDaysAgo.setUTCDate(today.getUTCDate() - 90);
 
+        // FIX: Explicitly create the full Customer object instead of relying on spread, to fix type error.
         const customers: Customer[] = Object.values(customersById).map(({ invoices, ...customer }) => {
             const lastPurchaseTime = customer.lastPurchaseDate ? new Date(customer.lastPurchaseDate).getTime() : 0;
             const firstPurchaseTime = customer.firstPurchaseDate ? new Date(customer.firstPurchaseDate).getTime() : 0;
             const daysSinceLastPurchase = lastPurchaseTime > 0 ? Math.floor((today.getTime() - lastPurchaseTime) / (1000 * 60 * 60 * 24)) : Infinity;
             const isNew = firstPurchaseTime > 0 && new Date(firstPurchaseTime) >= ninetyDaysAgo;
             const isAtRisk = daysSinceLastPurchase > 180;
-            return { ...customer, invoiceCount: invoices.size, daysSinceLastPurchase, isNew, isAtRisk, timestamp };
+            return { 
+                id: customer.id,
+                name: customer.name,
+                totalRevenue: customer.totalRevenue,
+                totalUnits: customer.totalUnits,
+                lastPurchaseDate: customer.lastPurchaseDate,
+                firstPurchaseDate: customer.firstPurchaseDate,
+                sales: customer.sales,
+                invoiceCount: invoices.size, 
+                daysSinceLastPurchase, 
+                isNew, 
+                isAtRisk, 
+                timestamp 
+            };
         });
 
         if (customers.length > 0) {

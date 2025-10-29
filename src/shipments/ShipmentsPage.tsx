@@ -1,12 +1,10 @@
 
 
-
-
 import React, { useState, useMemo, Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../contexts/DataContext';
 import Card from '../ui/Card';
-import { AugmentedShipmentGroup, LocalFiltersState, ViewType } from '../../types';
+import { AugmentedShipmentGroup, LocalFiltersState, ViewType, Shipment } from '../../types';
 import { BanknotesIcon, CubeIcon, DocumentMagnifyingGlassIcon, TruckIcon, ChevronUpIcon, ChevronDownIcon, ChevronRightIcon, ClockIcon, CheckBadgeIcon, PackageIcon, ExclamationTriangleIcon } from '../ui/Icons';
 import AnimatedCounter from '../ui/AnimatedCounter';
 
@@ -122,7 +120,8 @@ const ShipmentTimeline: React.FC<{ group: AugmentedShipmentGroup }> = ({ group }
 ShipmentTimeline.displayName = 'ShipmentTimeline';
 
 const ModelSummary: React.FC<{ items: AugmentedShipmentItem[] }> = ({ items }) => {
-    const uniqueModels = [...new Map(items.map(item => [item.modelName, item])).values()];
+    // FIX: Add generic type argument to new Map to correctly infer uniqueModels as AugmentedShipmentItem[] instead of unknown[].
+    const uniqueModels = [...new Map<string, AugmentedShipmentItem>(items.map(item => [item.modelName, item])).values()];
     
     if (uniqueModels.length === 0) return null;
 

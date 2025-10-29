@@ -1,4 +1,5 @@
-import React, { useContext, useMemo } from 'react';
+
+import React, { useContext, useMemo, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { ThemeContext } from '../../contexts/ThemeContext';
@@ -9,7 +10,16 @@ interface HistoricalSalesChartProps {
 
 const HistoricalSalesChart: React.FC<HistoricalSalesChartProps> = React.memo(({ dailySales }) => {
     const themeContext = useContext(ThemeContext);
+    const chartRef = useRef<ReactECharts>(null);
     const isDark = themeContext?.theme === 'dark';
+    
+    // Force resize on mount to fix rendering issues inside flex/grid containers
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            chartRef.current?.getEchartsInstance().resize();
+        }, 150);
+        return () => clearTimeout(timer);
+    }, []);
 
     const options: EChartsOption = useMemo(() => ({
         grid: {
@@ -66,6 +76,7 @@ const HistoricalSalesChart: React.FC<HistoricalSalesChartProps> = React.memo(({ 
     return (
         <div aria-label="Historical daily sales chart" role="figure" tabIndex={0}>
             <ReactECharts 
+                ref={chartRef}
                 option={options} 
                 style={{ height: '100%', width: '100%' }}
                 notMerge={true}

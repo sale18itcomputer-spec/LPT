@@ -3,6 +3,7 @@
 import React from 'react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+// FIX: Import `Type` from "@google/genai" for use in responseSchema.
 import { GoogleGenAI, Type } from "@google/genai";
 
 
@@ -17,6 +18,7 @@ import BottomNavBar from './BottomNavBar';
 import MobileMenu from './MobileMenu';
 import UpdateBanner from './ui/UpdateBanner';
 import TrackingSidebar from './shipments/TrackingSidebar';
+import Footer from './Footer';
 
 // --- Dashboard View Imports ---
 import OrderDashboard from './orders/OrderDashboard';
@@ -115,6 +117,7 @@ const Dashboard: React.FC = () => {
     const [showRefreshBanner, setShowRefreshBanner] = useState(false);
     const [sidebarActionsContent, setSidebarActionsContent] = useState<React.ReactNode | null>(null);
     const [trackingSidebarState, setTrackingSidebarState] = useState<{ isOpen: boolean; shipmentNumber: string | null }>({ isOpen: false, shipmentNumber: null });
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     
     // Centralized filter state
@@ -173,6 +176,7 @@ const Dashboard: React.FC = () => {
         setIsBuyerRegionLoading(true);
         try {
             if (!process.env.API_KEY) throw new Error("API key is not configured.");
+// FIX: Correctly initialize GoogleGenAI with a named apiKey parameter.
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             
             const prompt = `Given this list of company names in Cambodia: ${JSON.stringify(allBuyerNames)}, identify which are most likely located or primarily operate in "${region}". Return ONLY a JSON array of strings with exact matching company names.`;
@@ -257,41 +261,47 @@ const Dashboard: React.FC = () => {
 
     // --- Dynamic Component Rendering ---
     
-    const renderContent = () => {
-        let ActiveDashboardComponent: React.FC<any>;
-        let FilterComponentForView: React.FC<any> | null = null;
+    let ActiveDashboardComponent: React.FC<any>;
+    let FilterComponentForView: React.FC<any> | null = null;
 
-        switch (activeView) {
-            case 'orders': ActiveDashboardComponent = OrderDashboard; FilterComponentForView = OrderFilters; break;
-            case 'sales': ActiveDashboardComponent = SalesDashboard; FilterComponentForView = SalesFilters; break;
-            case 'tasks': ActiveDashboardComponent = TasksDashboard; FilterComponentForView = TasksFilters; break;
-            case 'inventory': ActiveDashboardComponent = InventoryDashboard; FilterComponentForView = InventoryFilters; break;
-            case 'customers': ActiveDashboardComponent = CustomerDashboard; FilterComponentForView = CustomerFilters; break;
-            case 'strategic': ActiveDashboardComponent = StrategicSalesDashboard; FilterComponentForView = StrategicFilters; break;
-            case 'backorders': ActiveDashboardComponent = BackorderAnalysisDashboard; FilterComponentForView = BackorderFilters; break;
-            case 'promotions': ActiveDashboardComponent = PromotionsDashboard; FilterComponentForView = PromotionsFilters; break;
-            case 'profile': ActiveDashboardComponent = UserProfile; FilterComponentForView = null; break;
-            case 'add-orders': ActiveDashboardComponent = AddOrdersPage; FilterComponentForView = null; break;
-            case 'data-transformer': ActiveDashboardComponent = DataTransformer; FilterComponentForView = null; break;
-            case 'price-list': ActiveDashboardComponent = PriceListPage; FilterComponentForView = PriceListFilters; break;
-            case 'serialization': ActiveDashboardComponent = SerializationPage; FilterComponentForView = null; break;
-            case 'rebates': ActiveDashboardComponent = RebateProgramsPage; FilterComponentForView = RebateFilters; break;
-            case 'rebate-validation': ActiveDashboardComponent = RebateValidationPage; FilterComponentForView = null; break;
-            case 'shipments': ActiveDashboardComponent = ShipmentsPage; FilterComponentForView = ShipmentFilters; break;
-            case 'profit-reconciliation': ActiveDashboardComponent = ProfitReconciliationPage; FilterComponentForView = ProfitReconciliationFilters; break;
-            case 'accessory-costs': ActiveDashboardComponent = AccessoryCostsPage; FilterComponentForView = null; break;
-            case 'landed-cost-analysis': ActiveDashboardComponent = LandedCostAnalysisPage; FilterComponentForView = null; break;
-            case 'order-vs-sale': ActiveDashboardComponent = OrderVsSalePage; FilterComponentForView = OrderVsSaleFilters; break;
-            default: ActiveDashboardComponent = OrderDashboard; FilterComponentForView = OrderFilters; break;
-        }
+    switch (activeView) {
+        case 'orders': ActiveDashboardComponent = OrderDashboard; FilterComponentForView = OrderFilters; break;
+        case 'sales': ActiveDashboardComponent = SalesDashboard; FilterComponentForView = SalesFilters; break;
+        case 'tasks': ActiveDashboardComponent = TasksDashboard; FilterComponentForView = TasksFilters; break;
+        case 'inventory': ActiveDashboardComponent = InventoryDashboard; FilterComponentForView = InventoryFilters; break;
+        case 'customers': ActiveDashboardComponent = CustomerDashboard; FilterComponentForView = CustomerFilters; break;
+        case 'strategic': ActiveDashboardComponent = StrategicSalesDashboard; FilterComponentForView = StrategicFilters; break;
+        case 'backorders': ActiveDashboardComponent = BackorderAnalysisDashboard; FilterComponentForView = BackorderFilters; break;
+        case 'promotions': ActiveDashboardComponent = PromotionsDashboard; FilterComponentForView = PromotionsFilters; break;
+        case 'profile': ActiveDashboardComponent = UserProfile; FilterComponentForView = null; break;
+        case 'add-orders': ActiveDashboardComponent = AddOrdersPage; FilterComponentForView = null; break;
+        case 'data-transformer': ActiveDashboardComponent = DataTransformer; FilterComponentForView = null; break;
+        case 'price-list': ActiveDashboardComponent = PriceListPage; FilterComponentForView = PriceListFilters; break;
+        case 'serialization': ActiveDashboardComponent = SerializationPage; FilterComponentForView = null; break;
+        case 'rebates': ActiveDashboardComponent = RebateProgramsPage; FilterComponentForView = RebateFilters; break;
+        case 'rebate-validation': ActiveDashboardComponent = RebateValidationPage; FilterComponentForView = null; break;
+        case 'shipments': ActiveDashboardComponent = ShipmentsPage; FilterComponentForView = ShipmentFilters; break;
+        case 'profit-reconciliation': ActiveDashboardComponent = ProfitReconciliationPage; FilterComponentForView = ProfitReconciliationFilters; break;
+        case 'accessory-costs': ActiveDashboardComponent = AccessoryCostsPage; FilterComponentForView = null; break;
+        case 'landed-cost-analysis': ActiveDashboardComponent = LandedCostAnalysisPage; FilterComponentForView = null; break;
+        case 'order-vs-sale': ActiveDashboardComponent = OrderVsSalePage; FilterComponentForView = OrderVsSaleFilters; break;
+        default: ActiveDashboardComponent = OrderDashboard; FilterComponentForView = OrderFilters; break;
+    }
 
-        if (!ActiveDashboardComponent) {
-            console.error(`Missing component for view: ${activeView}`);
-            return <div className="p-4">Component not found for {activeView}</div>;
-        }
-        
-        if (error) {
-            return (
+    const hasFilters = !!FilterComponentForView;
+
+    // Props that are common to many dashboard components
+    const commonDashboardProps = {
+        localFilters,
+        setLocalFilters,
+        userRole: user?.role || 'Admin',
+        onNavigateAndFilter: handleNavigateAndFilter,
+        onPsrefLookup: handlePsrefLookup,
+    };
+    
+    const mainContent = (
+        <>
+            {error && (
                 <div className="flex items-center justify-center min-h-[calc(100vh-140px)] p-4">
                     <div>
                         <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
@@ -299,68 +309,34 @@ const Dashboard: React.FC = () => {
                         <p className="text-red-700 bg-red-100 p-4 rounded-lg">{error}</p>
                     </div>
                 </div>
-            );
-        }
-        if (isLoading) {
-            return <DashboardSkeleton />;
-        }
-        
-        // Props that are common to many dashboard components
-        const commonDashboardProps = {
-            localFilters,
-            setLocalFilters,
-            userRole: user?.role || 'Admin',
-            onNavigateAndFilter: handleNavigateAndFilter,
-            onPsrefLookup: handlePsrefLookup,
-        };
-
-        return (
-            <div className="flex-grow flex min-h-0">
-                {FilterComponentForView && (
-                    <FilterManager
-                        onClear={resetLocalFilters}
-                        hasActiveFilters={hasActiveLocalFilters}
-                        viewName={activeView.replace('-', ' ')}
-                        sidebarActionsContent={sidebarActionsContent}
+            )}
+            {isLoading && !error && <DashboardSkeleton />}
+            {!isLoading && !error && ActiveDashboardComponent && (
+                <AnimatePresence mode="wait">
+                    <MotionDiv
+                        key={activeView}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
                     >
-                        <FilterComponentForView
-                            localFilters={localFilters}
-                            setLocalFilters={setLocalFilters}
-                             {...(activeView === 'sales' && {
-                                onBuyerRegionSearch: handleBuyerRegionSearch,
-                                isBuyerRegionLoading: isBuyerRegionLoading
-                            })}
-                        />
-                    </FilterManager>
-                )}
-                <main className={`flex-grow min-w-0 transition-all duration-300 ${FilterComponentForView ? 'md:pl-72' : ''}`}>
-                    <AnimatePresence mode="wait">
-                        <MotionDiv
-                            key={activeView}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.25, ease: 'easeInOut' }}
-                            className="h-full"
-                        >
-                             <ErrorBoundary>
-                                <ActiveDashboardComponent
-                                    {...commonDashboardProps}
-                                    // View-specific props are passed here
-                                    {...(activeView === 'orders' && { onRowClick: setSelectedOrder, onTrackShipment: handleTrackShipment })}
-                                    {...(activeView === 'inventory' && { inventoryData })}
-                                    {...(activeView === 'add-orders' && { onSaveSuccess: handleAddOrdersSuccess })}
-                                    {...(activeView === 'tasks' && { setSidebarActionsContent })}
-                                    {...(activeView === 'sales' && { aiFilteredBuyers })}
-                                    {...(activeView === 'shipments' && { onTrackShipment: handleTrackShipment })}
-                                />
-                             </ErrorBoundary>
-                        </MotionDiv>
-                    </AnimatePresence>
-                </main>
-            </div>
-        );
-    };
+                         <ErrorBoundary>
+                            <ActiveDashboardComponent
+                                {...commonDashboardProps}
+                                // View-specific props are passed here
+                                {...(activeView === 'orders' && { onRowClick: setSelectedOrder, onTrackShipment: handleTrackShipment })}
+                                {...(activeView === 'inventory' && { inventoryData })}
+                                {...(activeView === 'add-orders' && { onSaveSuccess: handleAddOrdersSuccess })}
+                                {...(activeView === 'tasks' && { setSidebarActionsContent })}
+                                {...(activeView === 'sales' && { aiFilteredBuyers })}
+                                {...(activeView === 'shipments' && { onTrackShipment: handleTrackShipment })}
+                            />
+                         </ErrorBoundary>
+                    </MotionDiv>
+                </AnimatePresence>
+            )}
+        </>
+    );
 
     return (
         <div className="flex flex-col min-h-screen">
@@ -385,11 +361,63 @@ const Dashboard: React.FC = () => {
                 />
             </div>
             
-            {renderContent()}
+            <div className="flex-1 flex min-h-0">
+                {/* --- DESKTOP SIDEBAR --- */}
+                {hasFilters && (
+                    <div className="hidden md:block">
+                        <FilterManager
+                            onClear={resetLocalFilters}
+                            hasActiveFilters={hasActiveLocalFilters}
+                            viewName={activeView.replace('-', ' ')}
+                            sidebarActionsContent={sidebarActionsContent}
+                            isCollapsed={isSidebarCollapsed}
+                            onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+                        >
+                            <FilterComponentForView
+                                localFilters={localFilters}
+                                setLocalFilters={setLocalFilters}
+                                {...(activeView === 'sales' && {
+                                    onBuyerRegionSearch: handleBuyerRegionSearch,
+                                    isBuyerRegionLoading: isBuyerRegionLoading
+                                })}
+                            />
+                        </FilterManager>
+                    </div>
+                )}
+                
+                {/* --- MAIN CONTENT & FOOTER WRAPPER --- */}
+                <div className={`flex-1 flex flex-col min-h-0 transition-all duration-300 ${hasFilters ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-72') : ''}`}>
+                    <main className="flex-1 min-w-0 overflow-y-auto custom-scrollbar">
+                        {mainContent}
+                    </main>
+                    <Footer />
+                </div>
+            </div>
             
+            {/* --- MODALS & MOBILE UI --- */}
             <OrderDetailsModal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} order={selectedOrder} newModelMtms={newModelMtms} filterOptions={orderFilterOptions} onDataUpdate={() => { handleGlobalRefresh(); setSelectedOrder(null); }} onPsrefLookup={handlePsrefLookup} />
             <TrackingSidebar isOpen={trackingSidebarState.isOpen} onClose={() => setTrackingSidebarState({ isOpen: false, shipmentNumber: null })} shipmentNumber={trackingSidebarState.shipmentNumber} />
             
+             {/* --- MOBILE FILTER --- */}
+            <div className="md:hidden">
+                {hasFilters && (
+                     <FilterManager
+                        onClear={resetLocalFilters}
+                        hasActiveFilters={hasActiveLocalFilters}
+                        viewName={activeView.replace('-', ' ')}
+                    >
+                        <FilterComponentForView
+                            localFilters={localFilters}
+                            setLocalFilters={setLocalFilters}
+                             {...(activeView === 'sales' && {
+                                onBuyerRegionSearch: handleBuyerRegionSearch,
+                                isBuyerRegionLoading: isBuyerRegionLoading
+                            })}
+                        />
+                    </FilterManager>
+                )}
+            </div>
+
             {!isLoading && !error && (
                 <>
                     <div className={`app-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-40 ${!isHeaderVisible ? 'is-hidden' : ''}`}>

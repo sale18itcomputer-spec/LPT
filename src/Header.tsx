@@ -130,7 +130,7 @@ const NavDropdown: React.FC<{ label: string; children: React.ReactNode; isActive
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.15, ease: 'easeOut' }}
-                        className={`absolute top-full mt-2 ${dropdownWidthClass} bg-secondary-bg dark:bg-dark-secondary-bg rounded-xl shadow-lg border border-border-color dark:border-dark-border-color z-40 origin-top-left p-2`}
+                        className={`absolute top-full mt-2 ${dropdownWidthClass} bg-secondary-bg/80 dark:bg-dark-secondary-bg/70 backdrop-blur-lg rounded-xl shadow-lg border border-black/5 dark:border-white/10 z-40 origin-top-left p-2`}
                     >
                         {children}
                     </motion.ul>
@@ -201,7 +201,7 @@ const Header: React.FC<HeaderProps> = ({
   const getIsActive = (views: ViewType[]) => activeView ? views.includes(activeView) : false;
 
   return (
-    <header className="bg-secondary-bg/90 dark:bg-dark-secondary-bg/90 backdrop-blur-md shadow-sm border-b border-border-color dark:border-dark-border-color">
+    <header className="bg-secondary-bg/80 dark:bg-dark-secondary-bg/70 backdrop-blur-xl shadow-sm border-b border-black/5 dark:border-white/10">
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div className="flex items-center">
@@ -291,7 +291,7 @@ const Header: React.FC<HeaderProps> = ({
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                                className="absolute top-full mt-2 w-64 right-0 bg-secondary-bg dark:bg-dark-secondary-bg rounded-xl shadow-lg border border-border-color dark:border-dark-border-color z-40 origin-top-right"
+                                className="absolute top-full mt-2 w-64 right-0 bg-secondary-bg/80 dark:bg-dark-secondary-bg/70 backdrop-blur-lg rounded-xl shadow-lg border border-black/5 dark:border-white/10 z-40 origin-top-right"
                             >
                                 {user && (
                                     <div className="flex items-center gap-3 p-4">

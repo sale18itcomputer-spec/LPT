@@ -1,9 +1,11 @@
+
 import React, { useState, useMemo, Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../contexts/DataContext';
 import Card from '../ui/Card';
 import KpiCard from '../ui/KpiCard';
-import { DashboardType } from '../../types';
+// FIX: Import `Shipment` type to resolve type error.
+import { DashboardType, Shipment } from '../../types';
 import { BanknotesIcon, CubeIcon, DocumentMagnifyingGlassIcon, TruckIcon, ChevronUpIcon, ChevronDownIcon, ChevronRightIcon, ChartBarIcon, ScaleIcon } from '../ui/Icons';
 
 
@@ -65,7 +67,7 @@ const LandedCostAnalysisPage: React.FC<LandedCostAnalysisPageProps> = ({ onNavig
     const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'salesOrder', direction: 'asc' });
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(15);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const groupedData: CostAnalysisGroup[] = useMemo(() => {
         const shipmentCostMap = new Map<string, number>();
@@ -132,7 +134,13 @@ const LandedCostAnalysisPage: React.FC<LandedCostAnalysisPageProps> = ({ onNavig
         let filteredData = [...groupedData];
         if (searchTerm) {
             const lower = searchTerm.toLowerCase();
-            filteredData = filteredData.filter(group => group.salesOrder.toLowerCase().includes(lower) || group.items.some(item => item.mtm.toLowerCase().includes(lower) || item.modelName.toLowerCase().includes(lower)));
+            filteredData = filteredData.filter(group =>
+                group.salesOrder.toLowerCase().includes(lower) ||
+                group.items.some(item =>
+                    item.mtm.toLowerCase().includes(lower) ||
+                    item.modelName.toLowerCase().includes(lower)
+                )
+            );
         }
         if (sortConfig) {
             filteredData.sort((a, b) => {
@@ -143,7 +151,7 @@ const LandedCostAnalysisPage: React.FC<LandedCostAnalysisPageProps> = ({ onNavig
         }
         return filteredData;
     }, [groupedData, searchTerm, sortConfig]);
-
+    
     const kpis = useMemo(() => {
         return sortedAndFilteredData.reduce((acc, group) => {
             acc.totalLandedCost += group.totalLandedCost;
@@ -277,7 +285,14 @@ const LandedCostAnalysisPage: React.FC<LandedCostAnalysisPageProps> = ({ onNavig
                             <div><p className="text-sm text-gray-600 dark:text-gray-400">Showing <span className="font-medium">{Math.min((currentPage - 1) * itemsPerPage + 1, sortedAndFilteredData.length)}</span> to <span className="font-medium">{Math.min(currentPage * itemsPerPage, sortedAndFilteredData.length)}</span> of <span className="font-medium">{sortedAndFilteredData.length}</span> items</p></div>
                             <div className="flex items-center space-x-2">
                                 <label htmlFor="items-per-page-landed-cost" className="text-sm text-gray-600 dark:text-gray-400">Rows:</label>
-                                <select id="items-per-page-landed-cost" value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1 px-2 text-primary-text dark:text-dark-primary-text text-sm"><option value="15">15</option><option value="30">30</option><option value="50">50</option></select>
+                                <select id="items-per-page-landed-cost" value={itemsPerPage} onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1 px-2 text-primary-text dark:text-dark-primary-text text-sm">
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                    <option value="200">200</option>
+                                    <option value="500">500</option>
+                                </select>
                                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination"><button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-primary-bg disabled:opacity-50">Prev</button><span className="relative inline-flex items-center px-4 py-2 border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-gray-700 dark:text-gray-300">{currentPage} / {totalPages}</span><button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-border-color dark:border-dark-border-color bg-secondary-bg dark:bg-dark-secondary-bg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-primary-bg disabled:opacity-50">Next</button></nav>
                             </div>
                         </div>
