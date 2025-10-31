@@ -4,21 +4,16 @@ import { useData } from '../../contexts/DataContext';
 import MultiSelect from '../ui/MultiSelect';
 import type { LocalFiltersState, SalesDateRangePreset } from '../../types';
 import Select from '../ui/Select';
-import { SparklesIcon } from '../ui/Icons';
-import { Spinner } from '../ui/Spinner';
 import { toYYYYMMDD, calculateDatesForPreset, calculateDatesForYearQuarter } from '../../utils/dateHelpers';
 
 
 interface SalesFiltersProps {
   localFilters: LocalFiltersState;
   setLocalFilters: React.Dispatch<React.SetStateAction<LocalFiltersState>>;
-  onBuyerRegionSearch: (region: string) => void;
-  isBuyerRegionLoading: boolean;
 }
 
-const SalesFilters: React.FC<SalesFiltersProps> = ({ localFilters, setLocalFilters, onBuyerRegionSearch, isBuyerRegionLoading }) => {
+const SalesFilters: React.FC<SalesFiltersProps> = ({ localFilters, setLocalFilters }) => {
   const { salesFilterOptions } = useData();
-  const [regionQuery, setRegionQuery] = useState(localFilters.salesBuyerRegion);
 
   const handleFilterChange = useCallback(<K extends keyof LocalFiltersState>(key: K, value: LocalFiltersState[K]) => {
     setLocalFilters(prev => {
@@ -85,31 +80,6 @@ const SalesFilters: React.FC<SalesFiltersProps> = ({ localFilters, setLocalFilte
     });
   }, [setLocalFilters]);
   
-  // Syncs the local region input state when the global filter is cleared
-  useEffect(() => {
-    if (localFilters.salesBuyerRegion === '' && regionQuery !== '') {
-        setRegionQuery('');
-    }
-  }, [localFilters.salesBuyerRegion, regionQuery]);
-
-  // Debounced effect to trigger the AI search
-  useEffect(() => {
-    // If the user's input is the same as what's already filtered, do nothing.
-    // This is the critical guard that prevents the infinite loop.
-    if (regionQuery === localFilters.salesBuyerRegion) {
-        return;
-    }
-    const handler = setTimeout(() => {
-        onBuyerRegionSearch(regionQuery);
-    }, 800);
-
-    return () => clearTimeout(handler);
-  }, [regionQuery, localFilters.salesBuyerRegion, onBuyerRegionSearch]);
-
-  const handleRegionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newQuery = e.target.value;
-    setRegionQuery(newQuery);
-  };
 
   const datePresets: { label: string; value: SalesDateRangePreset }[] = [
     { label: 'Last 30D', value: 'last30' },
@@ -143,25 +113,6 @@ const SalesFilters: React.FC<SalesFiltersProps> = ({ localFilters, setLocalFilte
           placeholder="Filter segments..."
         />
       </div>
-       <div>
-        <label htmlFor="buyer-region-search" className="block text-xs text-secondary-text mb-1">Filter Buyers by Region (AI)</label>
-        <div className="relative">
-          <SparklesIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-highlight" />
-          <input
-            id="buyer-region-search"
-            type="text"
-            placeholder="e.g., Phnom Penh, Banteay Meanchey..."
-            value={regionQuery}
-            onChange={handleRegionChange}
-            className="block w-full bg-secondary-bg dark:bg-dark-secondary-bg border border-border-color dark:border-dark-border-color rounded-md py-1.5 pl-9 pr-8 text-primary-text dark:text-dark-primary-text placeholder-secondary-text dark:placeholder-dark-secondary-text focus:outline-none focus:ring-2 focus:ring-highlight sm:text-sm"
-          />
-          {isBuyerRegionLoading && (
-            <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                <Spinner size="sm" />
-            </div>
-          )}
-        </div>
-      </div>
       <div>
         <MultiSelect
           label="Buyer"
@@ -169,7 +120,6 @@ const SalesFilters: React.FC<SalesFiltersProps> = ({ localFilters, setLocalFilte
           selected={localFilters.salesBuyer}
           onChange={v => handleFilterChange('salesBuyer', v)}
           placeholder="Filter buyers..."
-          disabledOptions={localFilters.salesBuyerRegion ? salesFilterOptions.buyers : []}
         />
       </div>
       <div>

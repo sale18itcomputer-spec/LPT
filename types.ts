@@ -1,9 +1,25 @@
-
-
-
 export type OrderDateRangePreset = 'last30' | 'last90' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'thisYear' | 'all' | 'custom';
 export type SalesDateRangePreset = 'last30' | 'last90' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'thisYear' | 'all' | 'custom';
 
+export interface SpecificationBreakdown {
+  cpuFamily?: string;
+  cpuModel?: string;
+  gpu?: string;
+  ramSize?: string;
+  storageSize?: string;
+  screenSize?: string;
+  screenType?: string;
+  os?: string;
+}
+
+export interface SpecificationSheetItem {
+  MTM: string;
+  CPU: string;
+  GPU: string;
+  RAM: string;
+  Storage: string;
+  Display: string;
+}
 
 export interface Order {
   salesOrder: string;
@@ -24,6 +40,7 @@ export interface Order {
   isDelayedTransit: boolean;
   isAtRisk: boolean;
   deliveryNumber: string | null;
+  parsedSpecification?: SpecificationBreakdown;
 }
 
 export interface FilterOptions {
@@ -55,6 +72,8 @@ export interface Sale {
   unitPrice: number;
   totalRevenue: number;
   localCurrency: string;
+  specification?: string;
+  parsedSpecification?: SpecificationBreakdown;
 }
 
 export interface SaleFilterOptions {
@@ -72,7 +91,7 @@ export interface SaleDataResponse {
 
 // --- Cross-Dashboard Types ---
 export type DashboardType = 'orders' | 'sales';
-export type ViewType = 'orders' | 'sales' | 'overview' | 'inventory' | 'customers' | 'strategic' | 'backorders' | 'promotions' | 'profile' | 'add-orders' | 'data-transformer' | 'price-list' | 'serialization' | 'rebates' | 'rebate-validation' | 'shipments' | 'profit-reconciliation' | 'accessory-costs' | 'tasks' | 'landed-cost-analysis' | 'order-vs-sale';
+export type ViewType = 'orders' | 'sales' | 'overview' | 'inventory' | 'customers' | 'strategic' | 'backorders' | 'promotions' | 'profile' | 'add-orders' | 'data-transformer' | 'price-list' | 'serialization' | 'rebates' | 'rebate-validation' | 'shipments' | 'profit-reconciliation' | 'accessory-costs' | 'tasks' | 'landed-cost-analysis' | 'order-vs-sale' | 'spec-breakdown';
 
 export type StockStatusFilter = 'all' | 'oversold' | 'otw' | 'healthy' | 'lowStock' | 'outOfStock' | 'noSales' | 'critical';
 
@@ -103,14 +122,12 @@ export interface LocalFiltersState {
     salesEndDate: string | null;
     salesRevenueMin: number | null;
     salesRevenueMax: number | null;
-    salesBuyerRegion: string;
     
     inventorySearchTerm: string;
     stockStatus: StockStatusFilter;
     customerSearchTerm: string;
     customerTier: CustomerTier[];
     customerStatus: 'all' | 'new' | 'atRisk' | 'active';
-    // Add customerMatrixQuadrant to filter customers by their matrix position (e.g., 'champions', 'atRisk') after clicking on the CustomerValueMatrix chart.
     customerMatrixQuadrant: 'champions' | 'highSpenders' | 'loyal' | 'atRisk' | null;
     strategicSearchTerm: string;
     strategicCustomerTier: CustomerTier[];
@@ -118,7 +135,6 @@ export interface LocalFiltersState {
     backorderPriority: 'all' | 'High' | 'Medium' | 'Low';
     promotionsSearchTerm: string;
     promotionsPriority: 'all' | PromotionCandidate['priority'];
-    // Add promotionsSegment to filter promotions by customer segment after clicking on the SegmentRevenueChart.
     promotionsSegment: string | null;
     priceListSearchTerm: string;
     priceListStockStatus: 'all' | 'inStock' | 'outOfStock' | 'lowStock';
@@ -141,6 +157,14 @@ export interface LocalFiltersState {
     taskSortBy: TaskSortOption;
     taskSortDir: TaskSortDirection;
     taskQuickFilter: 'all' | 'dueThisWeek';
+
+    // CPU Sales Table Filters
+    cpuSalesCpuFilter: string[];
+    cpuSalesMtmFilter: string[];
+    cpuSalesMtmPrefix: string;
+    cpuSalesYear: number;
+    cpuSalesStartWeek: number;
+    cpuSalesEndWeek: number;
 }
 
 // --- Inventory Types ---
@@ -178,6 +202,7 @@ export interface InventoryItem {
     timestamp: string;
     totalProfit?: number;
     profitMargin?: number;
+    parsedSpecification?: SpecificationBreakdown;
 }
 
 // --- Customer Types ---

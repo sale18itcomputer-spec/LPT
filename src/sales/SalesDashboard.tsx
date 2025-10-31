@@ -1,6 +1,7 @@
+
+
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { motion, type Variants, AnimatePresence, useInView } from 'framer-motion';
-import { GoogleGenAI } from "@google/genai";
 
 import { useData } from '../../contexts/DataContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -23,7 +24,6 @@ interface SalesDashboardProps {
   onNavigateAndFilter: (view: ViewType, filters: Partial<LocalFiltersState>) => void;
   localFilters: LocalFiltersState;
   setLocalFilters: React.Dispatch<React.SetStateAction<LocalFiltersState>>;
-  aiFilteredBuyers: string[] | null;
 }
 
 // Animation variants
@@ -87,7 +87,6 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({
   onNavigateAndFilter, 
   localFilters, 
   setLocalFilters, 
-  aiFilteredBuyers 
 }) => {
     const { allSales, reconciledSales } = useData();
     const { showToast } = useToast();
@@ -98,8 +97,6 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({
     // State
     const [selectedBuyer, setSelectedBuyer] = useState<string | null>(null);
     const [selectedModel, setSelectedModel] = useState<string | null>(null);
-    const [analysis, setAnalysis] = useState<string | null>(null);
-    const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
     const [showScrollTop, setShowScrollTop] = useState(false);
 
     // Scroll to top
@@ -116,10 +113,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({
         const { salesSearchTerm, salesSegment, salesBuyer, salesStartDate, salesEndDate, salesRevenueMin, salesRevenueMax } = localFilters;
         let salesToFilter = [...allSales];
 
-        if (aiFilteredBuyers !== null) {
-            const buyerSet = new Set(aiFilteredBuyers);
-            salesToFilter = salesToFilter.filter(s => buyerSet.has(s.buyerName));
-        } else if (salesBuyer.length > 0) {
+        if (salesBuyer.length > 0) {
             const buyerSet = new Set(salesBuyer);
             salesToFilter = salesToFilter.filter(s => buyerSet.has(s.buyerName));
         }
@@ -142,7 +136,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({
             }
             return true;
         });
-    }, [allSales, localFilters, aiFilteredBuyers]);
+    }, [allSales, localFilters]);
 
     const { kpiData, profitByMtm } = useMemo(() => {
         if (locallyFilteredSales.length === 0) return { kpiData: null, profitByMtm: new Map() };
@@ -177,47 +171,16 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({
             profitByMtm: mtmMap
         };
     }, [locallyFilteredSales, reconciledSales]);
-
-    const trendData = useMemo(() => {
-        const map: Record<string, { sortKey: string; label: string; value: number }> = {};
-        locallyFilteredSales.forEach(sale => {
-            if (!sale.invoiceDate) return;
-            const d = new Date(sale.invoiceDate);
-            const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-            const label = `${d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' })} '${String(d.getUTCFullYear()).slice(2)}`;
-            if (!map[key]) map[key] = { sortKey: key, label, value: 0 };
-            map[key].value += sale.totalRevenue;
-        });
-        return Object.values(map).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-    }, [locallyFilteredSales]);
-
-    // AI Analysis
-    const handleGenerateAnalysis = useCallback(async () => {
-        setIsLoadingAnalysis(true);
-        setAnalysis(null);
-        try {
-            if (!process.env.API_KEY) throw new Error("API key missing");
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const prompt = `Analyze trend: ${JSON.stringify(trendData)}. One sharp sentence.`;
-            const res = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
-            setAnalysis(res.text);
-        } catch (err) {
-            showToast(err instanceof Error ? err.message : 'AI error', 'error');
-        } finally {
-            setIsLoadingAnalysis(false);
-        }
-    }, [trendData, showToast]);
-
+    
     const activeFiltersCount = useMemo(() => {
         let c = 0;
         if (localFilters.salesSearchTerm) c++;
         if (localFilters.salesSegment.length > 0) c++;
-        if (localFilters.salesBuyer.length > 0 || aiFilteredBuyers?.length) c++;
+        if (localFilters.salesBuyer.length > 0) c++;
         if (localFilters.salesDateRangePreset !== 'thisYear' && localFilters.salesDateRangePreset !== 'all') c++;
         if (localFilters.salesRevenueMin !== null || localFilters.salesRevenueMax !== null) c++;
-        if (localFilters.salesBuyerRegion) c++;
         return c;
-    }, [localFilters, aiFilteredBuyers]);
+    }, [localFilters]);
 
     const clearAllFilters = useCallback(() => {
         setLocalFilters(prev => ({
@@ -226,7 +189,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({
             salesDateRangePreset: 'thisYear', salesYear: 'all', salesQuarter: 'all',
             salesStartDate: INITIAL_LOCAL_FILTERS.salesStartDate,
             salesEndDate: INITIAL_LOCAL_FILTERS.salesEndDate,
-            salesRevenueMin: null, salesRevenueMax: null, salesBuyerRegion: '',
+            salesRevenueMin: null, salesRevenueMax: null,
         }));
         showToast('Filters cleared', 'success');
     }, [setLocalFilters, showToast]);
@@ -307,27 +270,10 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({
                 <motion.div variants={itemVariants}>
                     <ChartCard 
                         title="Revenue Trend Over Time" 
-                        description={`Monthly revenue trend based on ${locallyFilteredSales.length.toLocaleString()} transactions`}
-                        controls={
-                            <button 
-                                onClick={handleGenerateAnalysis} 
-                                disabled={isLoadingAnalysis}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <SparklesIcon className="h-4 w-4" />
-                                {isLoadingAnalysis ? 'Analyzing...' : 'AI Insight'}
-                            </button>
-                        }
-                        className="h-[420px]"
+                        description={`Based on ${locallyFilteredSales.length.toLocaleString()} transactions`}
+                        className="h-[560px]"
                     >
-                        <RevenueTrendChart
-                            trendData={trendData}
-                            granularity="monthly"
-                            analysis={analysis}
-                            isLoadingAnalysis={isLoadingAnalysis}
-                            onClearAnalysis={() => setAnalysis(null)}
-                            onPeriodSelect={() => {}}
-                        />
+                        <RevenueTrendChart data={locallyFilteredSales} />
                     </ChartCard>
                 </motion.div>
 

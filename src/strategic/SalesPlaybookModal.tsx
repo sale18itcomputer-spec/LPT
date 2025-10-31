@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -29,9 +28,9 @@ interface CopyStates {
 
 const PlaybookSection: React.FC<{ icon: React.ReactNode, title: string, children: React.ReactNode, onCopy?: () => void, copyStatus?: 'idle' | 'copied' }> = 
 ({ icon, title, children, onCopy, copyStatus }) => (
-    <div className="bg-gray-50/70 p-4 rounded-lg border border-border-color">
+    <div className="bg-gray-50/70 dark:bg-dark-secondary-bg/50 p-4 rounded-lg border border-border-color dark:border-dark-border-color">
         <div className="flex justify-between items-center mb-2">
-            <h4 className="font-semibold text-primary-text flex items-center">
+            <h4 className="font-semibold text-primary-text dark:text-dark-primary-text flex items-center">
                 {icon}
                 {title}
             </h4>
@@ -185,29 +184,29 @@ Generate a JSON object for a playbook targeting this specific product opportunit
           onClick={onClose}
         >
           <ModalPanel className="w-full max-w-3xl">
-              <div className="flex justify-between items-start p-4 border-b border-border-color bg-gray-50 flex-shrink-0">
+              <div className="flex justify-between items-start p-4 border-b border-border-color dark:border-dark-border-color bg-gray-50 dark:bg-dark-secondary-bg/50 flex-shrink-0">
                 <div>
-                    <h2 className="text-lg font-semibold text-primary-text flex items-center">
+                    <h2 className="text-lg font-semibold text-primary-text dark:text-dark-primary-text flex items-center">
                     <SparklesIcon className="h-5 w-5 mr-2 text-indigo-500" />
                     AI Sales Playbook
                     </h2>
-                    <p className="text-sm text-secondary-text">For: {customerName}</p>
+                    <p className="text-sm text-secondary-text dark:text-dark-secondary-text">For: {customerName}</p>
                 </div>
-                <motion.button onClick={onClose} className="p-1 rounded-full text-secondary-text hover:bg-highlight-hover">
+                <motion.button onClick={onClose} className="p-1 rounded-full text-secondary-text dark:text-dark-secondary-text hover:bg-highlight-hover dark:hover:bg-dark-highlight-hover">
                   <XMarkIcon className="h-6 w-6" />
                 </motion.button>
               </div>
               
               <div className="p-4 sm:p-6 flex-grow overflow-y-auto min-h-0">
                 {isLoading && (
-                     <div className="flex flex-col items-center justify-center text-center text-secondary-text h-64">
+                     <div className="flex flex-col items-center justify-center text-center text-secondary-text dark:text-dark-secondary-text h-64">
                         <SparklesIcon className="h-10 w-10 animate-pulse text-indigo-400" />
                         <p className="mt-4 font-medium text-lg">Generating your sales playbook...</p>
                         <p className="text-sm">Analyzing customer history and stock levels.</p>
                     </div>
                 )}
                 {error && (
-                    <div className="flex items-center bg-red-50 text-red-700 p-4 rounded-lg">
+                    <div className="flex items-center bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-4 rounded-lg">
                         <ExclamationTriangleIcon className="h-6 w-6 mr-3 flex-shrink-0" />
                         <div>
                             <p className="font-semibold">Playbook Generation Failed</p>
@@ -218,7 +217,7 @@ Generate a JSON object for a playbook targeting this specific product opportunit
                 {playbook && !isLoading && (
                     <div className="space-y-4">
                         <PlaybookSection icon={<DocumentTextIcon className="h-5 w-5 mr-2" />} title="Executive Summary">
-                            <p className="text-sm text-secondary-text">{playbook.summary}</p>
+                            <p className="text-sm text-secondary-text dark:text-dark-secondary-text">{playbook.summary}</p>
                         </PlaybookSection>
 
                         <PlaybookSection 
@@ -227,7 +226,7 @@ Generate a JSON object for a playbook targeting this specific product opportunit
                             onCopy={() => handleCopy('email', playbook.emailDraft)} 
                             copyStatus={copyStates.email}
                         >
-                            <p className="text-sm text-secondary-text whitespace-pre-wrap">{playbook.emailDraft}</p>
+                            <p className="text-sm text-secondary-text dark:text-dark-secondary-text whitespace-pre-wrap">{playbook.emailDraft}</p>
                         </PlaybookSection>
 
                         <PlaybookSection 
@@ -236,7 +235,7 @@ Generate a JSON object for a playbook targeting this specific product opportunit
                             onCopy={() => handleCopy('points', playbook.talkingPoints.join('\n'))}
                             copyStatus={copyStates.points}
                         >
-                            <ul className="list-disc pl-5 space-y-1 text-sm text-secondary-text">
+                            <ul className="list-disc pl-5 space-y-1 text-sm text-secondary-text dark:text-dark-secondary-text">
                                 {playbook.talkingPoints.map((point, i) => <li key={i}>{point}</li>)}
                             </ul>
                         </PlaybookSection>
@@ -247,14 +246,14 @@ Generate a JSON object for a playbook targeting this specific product opportunit
                             onCopy={() => handleCopy('idea', playbook.promotionIdea)}
                             copyStatus={copyStates.idea}
                         >
-                            <p className="text-sm text-secondary-text">{playbook.promotionIdea}</p>
+                            <p className="text-sm text-secondary-text dark:text-dark-secondary-text">{playbook.promotionIdea}</p>
                         </PlaybookSection>
                     </div>
                 )}
               </div>
 
                {(playbook || error) && !isLoading && (
-                <div className="p-4 bg-gray-50 border-t border-border-color text-right flex-shrink-0">
+                <div className="p-4 bg-gray-50 dark:bg-dark-secondary-bg/50 border-t border-border-color dark:border-dark-border-color text-right flex-shrink-0">
                     <motion.button
                         onClick={generatePlaybook}
                         className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md"

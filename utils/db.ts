@@ -1,5 +1,6 @@
+
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import type { OrderDataResponse, SaleDataResponse, PriceListItem, SerializedItem, RebateProgram, RebateDetail, RebateSale, Shipment, AccessoryCost, Task } from '../types';
+import type { OrderDataResponse, SaleDataResponse, PriceListItem, SerializedItem, RebateProgram, RebateDetail, RebateSale, Shipment, AccessoryCost, Task, SpecificationSheetItem } from '../types';
 
 const DB_NAME = 'limperial-dashboard-db';
 const DB_VERSION = 1;
@@ -46,11 +47,15 @@ interface DashboardDB extends DBSchema {
     key: string;
     value: Task[];
   };
+  'specification-data': {
+    key: string;
+    value: SpecificationSheetItem[];
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<DashboardDB>> | null = null;
 
-type StoreName = 'order-data' | 'sale-data' | 'serialization-data' | 'price-list-data' | 'rebate-data' | 'rebate-details-data' | 'rebate-sales-data' | 'shipment-data' | 'backpack-cost-data' | 'tasks-data';
+type StoreName = 'order-data' | 'sale-data' | 'serialization-data' | 'price-list-data' | 'rebate-data' | 'rebate-details-data' | 'rebate-sales-data' | 'shipment-data' | 'backpack-cost-data' | 'tasks-data' | 'specification-data';
 
 const getDb = (): Promise<IDBPDatabase<DashboardDB>> => {
   if (!dbPromise) {
@@ -85,6 +90,9 @@ const getDb = (): Promise<IDBPDatabase<DashboardDB>> => {
         }
         if (!db.objectStoreNames.contains('tasks-data')) {
           db.createObjectStore('tasks-data');
+        }
+        if (!db.objectStoreNames.contains('specification-data')) {
+          db.createObjectStore('specification-data');
         }
       },
     });

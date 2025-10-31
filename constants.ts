@@ -1,6 +1,5 @@
-
-
 import type { LocalFiltersState, OrderDateRangePreset, SalesDateRangePreset, TaskSortDirection, TaskSortOption } from './types';
+import { getISOWeek } from './utils/dateHelpers';
 
 // --- SOURCE DATA SHEETS ---
 // These sheets contain the raw, primary data for the application.
@@ -19,6 +18,7 @@ const PRICE_LIST_SHEET_GID = '1153899190';
 const SERIALIZATION_SHEET_GID = '910322864';
 const SHIPMENT_SHEET_GID = '1106423559';
 const BACKPACK_COST_SHEET_GID = '1544765639';
+const SPECIFICATION_SHEET_GID = '2134247726';
 
 // Export URLs for fetching source data
 export const ORDER_SHEET_URL = `https://docs.google.com/spreadsheets/d/${SOURCE_DATA_SHEET_ID}/export?format=csv&gid=${ORDER_SHEET_GID}`;
@@ -28,6 +28,8 @@ export const PRICE_LIST_SHEET_URL = `https://docs.google.com/spreadsheets/d/${SO
 export const SERIALIZATION_SHEET_URL = `https://docs.google.com/spreadsheets/d/${SOURCE_DATA_SHEET_ID}/export?format=csv&gid=${SERIALIZATION_SHEET_GID}`;
 export const SHIPMENT_SHEET_URL = `https://docs.google.com/spreadsheets/d/${SOURCE_DATA_SHEET_ID}/export?format=csv&gid=${SHIPMENT_SHEET_GID}`;
 export const BACKPACK_COST_SHEET_URL = `https://docs.google.com/spreadsheets/d/${SOURCE_DATA_SHEET_ID}/export?format=csv&gid=${BACKPACK_COST_SHEET_GID}`;
+export const SPECIFICATION_SHEET_URL = `https://docs.google.com/spreadsheets/d/${SOURCE_DATA_SHEET_ID}/export?format=csv&gid=${SPECIFICATION_SHEET_GID}`;
+
 
 const REBATE_DATA_SHEET_ID = '1MzF6aF3AxM-1sVEGTeZbQ-gCOg0iILGNTDUSTTIn39s';
 const REBATE_SHEET_GID = '929148045';
@@ -87,6 +89,9 @@ export const TASKS_SHEET_NAME = 'Tasks';
 
 
 // --- APP CONSTANTS ---
+const currentYear = new Date().getUTCFullYear();
+const currentWeek = getISOWeek(new Date());
+
 export const INITIAL_LOCAL_FILTERS: LocalFiltersState = {
     orderSearchTerm: '',
     orderShow: 'all',
@@ -108,7 +113,6 @@ export const INITIAL_LOCAL_FILTERS: LocalFiltersState = {
     salesEndDate: null,
     salesRevenueMin: null,
     salesRevenueMax: null,
-    salesBuyerRegion: '',
     
     inventorySearchTerm: '',
     stockStatus: 'all',
@@ -144,4 +148,12 @@ export const INITIAL_LOCAL_FILTERS: LocalFiltersState = {
     taskSortBy: 'createdAt' as TaskSortOption,
     taskSortDir: 'asc' as TaskSortDirection,
     taskQuickFilter: 'all',
+    
+    // CPU Sales Table Filters
+    cpuSalesCpuFilter: [],
+    cpuSalesMtmFilter: [],
+    cpuSalesMtmPrefix: 'all',
+    cpuSalesYear: currentYear,
+    cpuSalesStartWeek: Math.max(1, currentWeek - 10),
+    cpuSalesEndWeek: currentWeek,
 };

@@ -17,11 +17,11 @@ interface SalesKpiCardsProps {
 
 const SalesKpiCards: React.FC<SalesKpiCardsProps> = ({ kpiData }) => {
   const currencyFormatter = (val: number) => {
-      const formatted = new Intl.NumberFormat('en-US', {
-          notation: 'compact',
-          maximumFractionDigits: 2
+      return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          maximumFractionDigits: 0
       }).format(val);
-      return `$${formatted}`;
   };
   const percentFormatter = (val: number) => `${val.toFixed(1)}%`;
 

@@ -1,5 +1,4 @@
 
-
 import React, { useMemo, useContext, useState, useId } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LabelList, Treemap } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -152,7 +151,6 @@ const TopBuyersChart: React.FC<TopBuyersChartProps> = React.memo(
     const isDark = themeContext?.theme === 'dark';
 
     const topBuyersData = useMemo(() => {
-// FIX: Explicitly type the accumulator in the `reduce` call to ensure correct type inference.
         const aggregated = sales.reduce((acc: Record<string, { revenue: number; units: number }>, s: Sale) => {
             if (s.buyerName === 'N/A') return acc;
             if (!acc[s.buyerName]) {
@@ -162,14 +160,14 @@ const TopBuyersChart: React.FC<TopBuyersChartProps> = React.memo(
             acc[s.buyerName].units += s.quantity;
             return acc;
         }, {});
-    
-        return Object.entries(aggregated)
-          .map(([name, { revenue, units }]) => ({
-            name,
-            revenue,
-            units,
-          }))
-          .sort((a, b) => b[sortBy] - a[sortBy]);
+  
+      return Object.entries(aggregated)
+        .map(([name, { revenue, units }]) => ({
+          name,
+          revenue,
+          units,
+        }))
+        .sort((a, b) => b[sortBy] - a[sortBy]);
     }, [sales, sortBy]);
 
     const chartData = useMemo(() => {
@@ -193,7 +191,7 @@ const TopBuyersChart: React.FC<TopBuyersChartProps> = React.memo(
             const value = item[sortBy];
             const label = item.name;
             const displayValue = sortBy === 'units' ? compactNumberFormatter(value) : compactCurrencyFormatter(value);
-
+            
             const color = PALETTE[index % PALETTE.length];
             const isSelected = selectedBuyer === item.name;
             const isDimmed = selectedBuyer && !isSelected;
@@ -260,87 +258,87 @@ const TopBuyersChart: React.FC<TopBuyersChartProps> = React.memo(
     }
 
     return (
-        <ChartCard
-            title="Customer Insights: Top Buyers"
-            description={`Ranked by ${sortBy}`}
-            controls={
-                <>
-                    <SegmentedControl 
-                        value={sortBy} 
-                        onChange={v => setSortBy(v as SortBy)} 
-                        options={[
-                            {label:'Revenue', value:'revenue'}, 
-                            {label:'Units', value:'units'}
-                        ]} 
-                        label="Sort By" 
-                    />
-                    <ViewModeSwitcher viewMode={viewMode} setViewMode={setViewMode} />
-                </>
-            }
-            className="flex flex-col h-[500px]"
+    <ChartCard
+      title="Customer Insights: Top Buyers"
+      description={`Ranked by ${sortBy}`}
+      controls={
+        <>
+          <SegmentedControl 
+            value={sortBy} 
+            onChange={v => setSortBy(v as SortBy)} 
+            options={[
+                {label:'Revenue', value:'revenue'}, 
+                {label:'Units', value:'units'}
+            ]} 
+            label="Sort By" 
+          />
+          <ViewModeSwitcher viewMode={viewMode} setViewMode={setViewMode} />
+        </>
+      }
+      className="flex flex-col h-[560px]"
+    >
+      <div aria-live="polite" className="sr-only">
+        Viewing {viewMode} of top buyers sorted by {sortBy}.
+      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={viewMode}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.25 }}
+          className="flex-grow min-h-0 pt-2"
         >
-            <div aria-live="polite" className="sr-only">
-                Viewing {viewMode} of top buyers sorted by {sortBy}.
-            </div>
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={viewMode}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.25 }}
-                    className="flex-grow min-h-0 pt-2"
+          {viewMode === 'bar' && (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                layout="vertical"
+                margin={{ top: 5, right: 80, left: 0, bottom: 5 }}
+                onClick={handleBarClick}
+              >
+                <defs>
+                  <linearGradient id="buyer-bar-gradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor={isDark ? '#3b82f6' : '#60a5fa'} />
+                    <stop offset="100%" stopColor={isDark ? '#1d4ed8' : '#2563eb'} />
+                  </linearGradient>
+                </defs>
+                <XAxis type="number" hide />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 12, fill: isDark ? '#d4d4d8' : '#4b5563', fontWeight: 500 }}
+                  width={140}
+                  tickFormatter={(v) => (v.length > 20 ? `${v.substring(0, 18)}...` : v)}
+                />
+                <Tooltip content={<CustomTooltipContent />} cursor={{ fill: isDark ? 'rgba(128,128,128,0.1)' : 'rgba(229,231,235,0.5)' }} />
+                <Bar
+                  dataKey={sortBy}
+                  fill="url(#buyer-bar-gradient)"
+                  barSize={16}
+                  radius={[0, 4, 4, 0] as any}
+                  background={{ fill: isDark ? '#374151' : '#f3f4f6' }}
                 >
-                {viewMode === 'bar' && (
-                    <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                        data={chartData}
-                        layout="vertical"
-                        margin={{ top: 5, right: 80, left: 0, bottom: 5 }}
-                        onClick={handleBarClick}
-                    >
-                        <defs>
-                        <linearGradient id="buyer-bar-gradient" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor={isDark ? '#3b82f6' : '#60a5fa'} />
-                            <stop offset="100%" stopColor={isDark ? '#1d4ed8' : '#2563eb'} />
-                        </linearGradient>
-                        </defs>
-                        <XAxis type="number" hide />
-                        <YAxis
-                        type="category"
-                        dataKey="name"
-                        tickLine={false}
-                        axisLine={false}
-                        tick={{ fontSize: 12, fill: isDark ? '#d4d4d8' : '#4b5563', fontWeight: 500 }}
-                        width={140}
-                        tickFormatter={(v) => (v.length > 20 ? `${v.substring(0, 18)}...` : v)}
-                        />
-                        <Tooltip content={<CustomTooltipContent />} cursor={{ fill: isDark ? 'rgba(128,128,128,0.1)' : 'rgba(229,231,235,0.5)' }} />
-                        <Bar
-                        dataKey={sortBy}
-                        fill="url(#buyer-bar-gradient)"
-                        barSize={16}
-                        radius={[0, 4, 4, 0] as any}
-                        background={{ fill: isDark ? '#374151' : '#f3f4f6' }}
-                        >
-                        <LabelList
-                            dataKey={sortBy}
-                            position="right"
-                            formatter={(value: unknown) => {
-                                if (typeof value !== 'number') return null;
-                                return sortBy === 'revenue' ? compactCurrencyFormatter(value) : compactNumberFormatter(value);
-                            }}
-                            style={{ fontSize: 12, fontWeight: '600', fill: isDark ? '#f1f5f9' : '#0f172a' }}
-                        />
-                        </Bar>
-                    </BarChart>
-                    </ResponsiveContainer>
-                )}
-                {viewMode === 'treemap' && <TreemapView data={topBuyersData} sortBy={sortBy} />}
-                {viewMode === 'table' && <DataTable data={topBuyersData} sortBy={sortBy} onRowClick={onBuyerSelect} />}
-                </motion.div>
-            </AnimatePresence>
-        </ChartCard>
+                  <LabelList
+                    dataKey={sortBy}
+                    position="right"
+                    formatter={(value: unknown) => {
+                        if (typeof value !== 'number') return null;
+                        return sortBy === 'revenue' ? compactCurrencyFormatter(value) : compactNumberFormatter(value);
+                    }}
+                    style={{ fontSize: 12, fontWeight: '600', fill: isDark ? '#f1f5f9' : '#0f172a' }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+          {viewMode === 'treemap' && <TreemapView data={topBuyersData} sortBy={sortBy} />}
+          {viewMode === 'table' && <DataTable data={topBuyersData} sortBy={sortBy} onRowClick={onBuyerSelect} />}
+        </motion.div>
+      </AnimatePresence>
+    </ChartCard>
     );
   }
 );

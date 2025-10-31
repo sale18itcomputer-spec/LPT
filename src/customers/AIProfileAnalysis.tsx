@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -73,12 +72,17 @@ Analyze the customer data and generate a concise, actionable analysis. Return a 
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: prompt,
-                config: { temperature: 0.6, responseMimeType: "application/json", responseSchema: schema }
+                config: { 
+                    temperature: 0.6, 
+                    responseMimeType: "application/json", 
+                    responseSchema: schema 
+                }
             });
 
             setAnalysis(JSON.parse(response.text));
 
         } catch (err) {
+            console.error("Error generating AI profile analysis:", err);
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
             setIsLoading(false);

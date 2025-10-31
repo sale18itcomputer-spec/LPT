@@ -96,6 +96,7 @@ Example Harmonization: "Use the 'Back to School' momentum to lead into Pchum Ben
             const parsedStrategy = JSON.parse(response.text) as AnnualStrategy;
             onGenerated(parsedStrategy);
         } catch (err) {
+            console.error("Error generating annual strategy:", err);
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
             setIsLoading(false);
@@ -128,7 +129,7 @@ ${q.campaigns.map(c => `
             <div className="p-4 flex-grow flex flex-col">
                 <div className="flex justify-between items-start mb-4">
                     <div>
-                        <h3 className="text-lg font-semibold text-primary-text flex items-center">
+                        <h3 className="text-lg font-semibold text-primary-text dark:text-dark-primary-text flex items-center">
                             <SparklesIcon className="h-5 w-5 mr-2 text-indigo-500" />
                             AI Annual Strategy Planner
                         </h3>
@@ -164,20 +165,20 @@ ${q.campaigns.map(c => `
                         ) : currentStrategy ? (
                             <motion.div key="strategy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4 text-sm">
                                 <div>
-                                    <h4 className="font-bold text-base text-primary-text">{currentStrategy.overarchingTheme}</h4>
+                                    <h4 className="font-bold text-base text-primary-text dark:text-dark-primary-text">{currentStrategy.overarchingTheme}</h4>
                                 </div>
                                 <div className="space-y-3">
                                     {currentStrategy.quarterlyPlans.map(plan => (
                                         <div key={plan.quarter}>
-                                            <p className="font-semibold text-primary-text">{plan.quarter}: <span className="font-normal text-secondary-text">{plan.strategicFocus}</span></p>
+                                            <p className="font-semibold text-primary-text dark:text-dark-primary-text">{plan.quarter}: <span className="font-normal text-secondary-text dark:text-dark-secondary-text">{plan.strategicFocus}</span></p>
                                         </div>
                                     ))}
                                 </div>
                             </motion.div>
                         ) : (
-                             <motion.div key="initial" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center text-center text-secondary-text h-full border-2 border-dashed border-border-color rounded-lg p-4">
+                             <motion.div key="initial" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center text-center text-secondary-text h-full border-2 border-dashed border-border-color dark:border-dark-border-color rounded-lg p-4">
                                 <SparklesIcon className="h-8 w-8 text-slate-400 mb-2" />
-                                <h4 className="font-semibold text-primary-text">Generate a Year-Long Marketing Plan</h4>
+                                <h4 className="font-semibold text-primary-text dark:text-dark-primary-text">Generate a Year-Long Marketing Plan</h4>
                                 <p className="text-xs mt-1">Click the button to create a harmonized marketing calendar.</p>
                              </motion.div>
                         )}
@@ -185,7 +186,7 @@ ${q.campaigns.map(c => `
                 </div>
             </div>
             {currentStrategy && !isLoading && (
-                <div className="p-4 border-t border-border-color flex-shrink-0 flex justify-end gap-x-2">
+                <div className="p-4 border-t border-border-color dark:border-dark-border-color flex-shrink-0 flex justify-end gap-x-2">
                      <button onClick={handleCopy} className="inline-flex items-center px-2.5 py-1 border border-transparent text-xs font-medium rounded-md shadow-sm text-indigo-700 bg-indigo-100 hover:bg-indigo-200"><DocumentDuplicateIcon className="h-4 w-4 mr-1.5"/>{copyStatus === 'copied' ? 'Copied' : 'Copy Full Strategy'}</button>
                      <button onClick={handleGenerate} disabled={isLoading} className="inline-flex items-center px-2.5 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">Regenerate</button>
                 </div>

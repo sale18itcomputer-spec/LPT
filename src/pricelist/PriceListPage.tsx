@@ -312,8 +312,7 @@ const PriceListPage: React.FC<PriceListPageProps> = ({ localFilters, setLocalFil
             filteredData = filteredData.filter(item =>
                 item.mtm.toLowerCase().includes(lower) ||
                 item.modelName.toLowerCase().includes(lower) ||
-                item.description.toLowerCase().includes(lower) ||
-                item.salesOrderDetails.some(d => d.salesOrder.toLowerCase().includes(lower) || d.color.toLowerCase().includes(lower))
+                item.description.toLowerCase().includes(lower)
             );
         }
         

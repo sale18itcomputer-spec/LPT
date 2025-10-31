@@ -1,5 +1,4 @@
 
-
 import React, { useMemo, useState, useContext, useId } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LabelList, Treemap } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,8 +15,7 @@ interface PeriodData {
   revenue: number;
   growth: number | null;
   sortKey: string;
-  // FIX: Add index signature to satisfy Recharts' Treemap data type requirement.
-  [key: string]: any;
+  [key: string]: any; // FIX: Add index signature for Recharts Treemap compatibility
 }
 
 type PeriodType = 'quarterly' | 'monthly' | 'weekly' | 'daily';
@@ -271,7 +269,7 @@ const SalesBreakdownByPeriod: React.FC<{ sales: Sale[] }> = ({ sales }) => {
       title="Sales Breakdown by Period"
       description={`${periodType.charAt(0).toUpperCase() + periodType.slice(1)} revenue`}
       controls={controls}
-      className="flex flex-col h-[500px]"
+      className="flex flex-col h-[560px]"
     >
       <div aria-live="polite" className="sr-only">
         Viewing {viewMode} of sales by {periodType}.

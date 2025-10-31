@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -167,6 +166,7 @@ Generate a JSON object containing an array of three unique campaign playbooks. E
             const parsedCampaigns = JSON.parse(response.text);
             setCampaigns(parsedCampaigns);
         } catch (err) {
+            console.error("Error generating promotion plan:", err);
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
             setIsLoading(false);

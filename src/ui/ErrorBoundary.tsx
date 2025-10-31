@@ -1,6 +1,5 @@
 
-
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { ExclamationTriangleIcon } from './Icons';
 
 interface Props {
@@ -12,35 +11,34 @@ interface State {
   error?: Error;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  // FIX: Initialize state in the constructor instead of as a class property to fix errors with `this.state` and `this.props`.
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false };
-  }
+class ErrorBoundary extends React.Component<Props, State> {
+  state: State = { hasError: false };
 
-  public static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Uncaught error in component:", error, errorInfo);
   }
 
   private handleRefresh = () => {
     window.location.reload();
   };
 
-  public render() {
-    if (this.state.hasError) {
+  render() {
+    const { hasError, error } = this.state;
+    const { children } = this.props;
+
+    if (hasError) {
       return (
         <div className="flex flex-col items-center justify-center h-full min-h-[300px] p-4 text-center bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-lg">
             <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mb-4" />
             <h1 className="text-xl font-bold text-red-800 dark:text-red-200">Something went wrong.</h1>
             <p className="mt-2 text-sm text-red-700 dark:text-red-300">A part of the dashboard has crashed. Please try refreshing the page.</p>
-            {this.state.error && (
+            {error && (
                 <pre className="mt-4 text-xs text-left bg-red-100 dark:bg-red-900/20 p-2 rounded-md overflow-auto max-h-24 w-full">
-                    {this.state.error.toString()}
+                    {error.toString()}
                 </pre>
             )}
             <button
@@ -53,7 +51,7 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    return this.props.children;
+    return children;
   }
 }
 

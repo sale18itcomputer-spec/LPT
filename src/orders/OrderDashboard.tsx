@@ -1,7 +1,5 @@
 
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-// FIX: Add `Variants` to framer-motion import to fix typing issues with animation variants.
 import { motion, AnimatePresence, useInView, type Variants } from 'framer-motion';
 import { useData } from '../../contexts/DataContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -25,13 +23,9 @@ interface OrderDashboardProps {
     setLocalFilters: React.Dispatch<React.SetStateAction<LocalFiltersState>>;
 }
 
-// FIX: Explicitly typed animation variants with `Variants` from framer-motion to resolve type errors.
 const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.05 } } };
-// FIX: Replaced invalid cubic-bezier array for `ease` with a valid string literal 'easeOut' to fix typing errors.
 const itemVariants: Variants = { hidden: { y: 30, opacity: 0, scale: 0.97 }, visible: { y: 0, opacity: 1, scale: 1, transition: { duration: 0.6, ease: 'easeOut' } } };
-// FIX: Replaced invalid cubic-bezier array for `ease` with a valid string literal 'easeOut' to fix typing errors.
 const headerVariants: Variants = { hidden: { y: -20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { duration: 0.7, ease: 'easeOut' } } };
-// FIX: Explicitly typed animation variants with `Variants` from framer-motion to resolve type errors.
 const filterBadgeVariants: Variants = { initial: { scale: 0, opacity: 0 }, animate: { scale: 1, opacity: 1, transition: { type: 'spring', stiffness: 500, damping: 30 } }, exit: { scale: 0, opacity: 0, transition: { duration: 0.2 } } };
 
 
@@ -203,12 +197,11 @@ const OrderDashboard: React.FC<OrderDashboardProps> = ({ onRowClick, onNavigateA
                 <OrderKpiCards kpiData={orderKpiData} />
             </motion.div>
             
-            <motion.div initial="hidden" animate="visible" variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            <motion.div initial="hidden" animate="visible" variants={containerVariants} className="grid grid-cols-1 gap-6 md:gap-8">
                 <motion.div variants={itemVariants}>
-                    <ChartCard title="Order Value Trend" description="Monthly value of orders by Order Receipt Date." className="h-[500px]">
+                    <ChartCard title="Order Value Trend" description="Value of orders by Order Receipt Date." className="h-[500px]">
                         <OrderValueTrendChart
-                            orders={locallyFilteredOrders}
-                            selectedPeriodKey={selectedPeriodKey}
+                            data={locallyFilteredOrders}
                         />
                     </ChartCard>
                 </motion.div>

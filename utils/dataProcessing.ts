@@ -1,4 +1,5 @@
-import type { Order, Sale, BackorderRecommendation, InventoryItem, PromotionCandidate, SerializedItem } from '../types';
+
+import type { Order, Sale, BackorderRecommendation, InventoryItem, PromotionCandidate, SerializedItem, SpecificationBreakdown } from '../types';
 
 export const calculateInventoryStatus = (allOrders: Order[], allSales: Sale[], allSerializedItems: SerializedItem[]): Map<string, any> => {
     // 1. Build a map to track which order lines (SO + MTM) have arrived.
@@ -11,10 +12,12 @@ export const calculateInventoryStatus = (allOrders: Order[], allSales: Sale[], a
     });
     
     // 2. Aggregate order data by MTM
-    const inventoryMap = new Map<string, { mtm: string; modelName: string; arrivedQty: number; totalLandingValue: number; totalFobValue: number; shippedQty: number; lastArrivalDate?: string; }>();
+    // FIX: Explicitly type the value of the map to include optional `parsedSpecification`.
+    const inventoryMap = new Map<string, { mtm: string; modelName: string; arrivedQty: number; totalLandingValue: number; totalFobValue: number; shippedQty: number; lastArrivalDate?: string; parsedSpecification?: SpecificationBreakdown; }>();
     allOrders.forEach(order => {
         if (!inventoryMap.has(order.mtm)) {
-            inventoryMap.set(order.mtm, { mtm: order.mtm, modelName: order.modelName, arrivedQty: 0, totalLandingValue: 0, totalFobValue: 0, shippedQty: 0 });
+            // FIX: Pass parsedSpecification from the order to the inventory map.
+            inventoryMap.set(order.mtm, { mtm: order.mtm, modelName: order.modelName, arrivedQty: 0, totalLandingValue: 0, totalFobValue: 0, shippedQty: 0, parsedSpecification: order.parsedSpecification });
         }
         const item = inventoryMap.get(order.mtm)!;
         item.shippedQty += order.qty;

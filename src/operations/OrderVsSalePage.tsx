@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useMemo, useState, Fragment, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../contexts/DataContext';
@@ -141,7 +143,7 @@ const ExpandedDetailView: React.FC<{
     const currencyWithDecimals = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
 
     return (
-        <div className="bg-gray-50 dark:bg-dark-primary-bg p-4">
+        <div className="bg-gray-50 dark:bg-dark-primary-bg p-4 sm:p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Ordered Items Card */}
                 <div className="bg-secondary-bg dark:bg-dark-secondary-bg rounded-lg border border-border-color dark:border-dark-border-color flex flex-col">
@@ -438,12 +440,12 @@ const OrderVsSalePage: React.FC<OrderVsSalePageProps> = ({ onNavigateAndFilter, 
     }, [reconciliationGroups, localFilters]);
     
     const kpis = useMemo(() => {
-        return (filteredGroups as ReconciliationGroup[]).reduce((acc, group: ReconciliationGroup) => {
+        return (filteredGroups as ReconciliationGroup[]).reduce((acc: { totalOrders: number, totalOrderQty: number, totalSaleQty: number, totalLandedCost: number, totalSaleValue: number, totalProfit: number }, group: ReconciliationGroup) => {
             acc.totalOrders++;
             acc.totalOrderQty += group.orderQty;
             acc.totalSaleQty += group.saleQty;
             acc.totalLandedCost += group.totalLandedCost;
-// FIX: Use `group.saleValue` instead of `group.totalSaleValue` to match the `ReconciliationGroup` interface.
+// FIX: Use `group.saleValue` instead of the non-existent `group.totalSaleValue` to match the `ReconciliationGroup` interface.
             acc.totalSaleValue += group.saleValue;
             acc.totalProfit += group.totalProfit;
             return acc;

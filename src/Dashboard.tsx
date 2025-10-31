@@ -3,8 +3,6 @@
 import React from 'react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// FIX: Import `Type` from "@google/genai" for use in responseSchema.
-import { GoogleGenAI, Type } from "@google/genai";
 
 
 // --- Component & UI Imports ---
@@ -41,6 +39,7 @@ import ProfitReconciliationPage from './profit-reconciliation/ProfitReconciliati
 import AccessoryCostsPage from './accessory/AccessoryCostsPage';
 import LandedCostAnalysisPage from './operations/LandedCostAnalysisPage';
 import OrderVsSalePage from './operations/OrderVsSalePage';
+import SpecificationBreakdownDashboard from './specs/SpecificationBreakdownDashboard';
 
 // --- Filter Component Imports ---
 import OrderFilters from './orders/OrderFilters';
@@ -56,6 +55,7 @@ import ShipmentFilters from './shipments/ShipmentFilters';
 import ProfitReconciliationFilters from './profit-reconciliation/ProfitReconciliationFilters';
 import OrderVsSaleFilters from './operations/filters/OrderVsSaleFilters';
 import TasksFilters from './tasks/TasksFilters';
+import SpecificationBreakdownFilters from './specs/SpecificationBreakdownFilters';
 
 // --- Contexts, Types, and Constants ---
 import { useData } from '../contexts/DataContext';
@@ -125,9 +125,6 @@ const Dashboard: React.FC = () => {
     const resetLocalFilters = useCallback(() => setLocalFilters(INITIAL_LOCAL_FILTERS), []);
     const hasActiveLocalFilters = useMemo(() => JSON.stringify(localFilters) !== JSON.stringify(INITIAL_LOCAL_FILTERS), [localFilters]);
 
-    // State for AI-powered sales filters
-    const [aiFilteredBuyers, setAiFilteredBuyers] = useState<string[] | null>(null);
-    const [isBuyerRegionLoading, setIsBuyerRegionLoading] = useState(false);
     
     // --- Custom Hooks & Memoization ---
     const isHeaderVisible = useScrollableHeader(headerRef);
@@ -136,7 +133,7 @@ const Dashboard: React.FC = () => {
         throw new Error("Dashboard must be used within a DataProvider");
     }
 
-    const { isLoading, isRefreshing, error, handleGlobalRefresh, lastUpdated, orderFilterOptions, newModelMtms, inventoryData, allSales } = dataContext;
+    const { isLoading, isRefreshing, error, handleGlobalRefresh, lastUpdated, orderFilterOptions, newModelMtms, inventoryData } = dataContext;
 
     // --- Handlers and Callbacks ---
     const handleAddOrdersSuccess = useCallback(() => {
@@ -163,52 +160,6 @@ const Dashboard: React.FC = () => {
         window.open(url, '_blank', 'noopener,noreferrer');
     }, []);
 
-    const allBuyerNames = useMemo(() => [...new Set(allSales.map(s => s.buyerName))], [allSales]);
-
-    const handleBuyerRegionSearch = useCallback(async (region: string) => {
-        setLocalFilters(prev => ({ ...prev, salesBuyerRegion: region, salesBuyer: [] }));
-
-        if (!region.trim()) {
-            setAiFilteredBuyers(null);
-            return;
-        }
-
-        setIsBuyerRegionLoading(true);
-        try {
-            if (!process.env.API_KEY) throw new Error("API key is not configured.");
-// FIX: Correctly initialize GoogleGenAI with a named apiKey parameter.
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            
-            const prompt = `Given this list of company names in Cambodia: ${JSON.stringify(allBuyerNames)}, identify which are most likely located or primarily operate in "${region}". Return ONLY a JSON array of strings with exact matching company names.`;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: prompt,
-                config: {
-                    temperature: 0.1,
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING }
-                    },
-                },
-            });
-
-            const result = JSON.parse(response.text);
-            setAiFilteredBuyers(result);
-            if (result.length === 0) {
-                showToast(`AI found no buyers matching "${region}".`, 'info');
-            }
-
-        } catch (err) {
-            console.error("Error fetching buyers by region:", err);
-            showToast(err instanceof Error ? `AI search failed: ${err.message}` : 'An AI search error occurred.', 'error');
-            setAiFilteredBuyers([]);
-        } finally {
-            setIsBuyerRegionLoading(false);
-        }
-    }, [allBuyerNames, showToast, setLocalFilters]);
-
 
     // --- Effects ---
 
@@ -226,7 +177,6 @@ const Dashboard: React.FC = () => {
     useEffect(() => {
         resetLocalFilters();
         setSidebarActionsContent(null);
-        setAiFilteredBuyers(null); // Clear AI filter on view change
 
         const navFiltersRaw = sessionStorage.getItem('_nav_filters');
         if (navFiltersRaw) {
@@ -285,6 +235,7 @@ const Dashboard: React.FC = () => {
         case 'accessory-costs': ActiveDashboardComponent = AccessoryCostsPage; FilterComponentForView = null; break;
         case 'landed-cost-analysis': ActiveDashboardComponent = LandedCostAnalysisPage; FilterComponentForView = null; break;
         case 'order-vs-sale': ActiveDashboardComponent = OrderVsSalePage; FilterComponentForView = OrderVsSaleFilters; break;
+        case 'spec-breakdown': ActiveDashboardComponent = SpecificationBreakdownDashboard; FilterComponentForView = SpecificationBreakdownFilters; break;
         default: ActiveDashboardComponent = OrderDashboard; FilterComponentForView = OrderFilters; break;
     }
 
@@ -328,7 +279,7 @@ const Dashboard: React.FC = () => {
                                 {...(activeView === 'inventory' && { inventoryData })}
                                 {...(activeView === 'add-orders' && { onSaveSuccess: handleAddOrdersSuccess })}
                                 {...(activeView === 'tasks' && { setSidebarActionsContent })}
-                                {...(activeView === 'sales' && { aiFilteredBuyers })}
+                                
                                 {...(activeView === 'shipments' && { onTrackShipment: handleTrackShipment })}
                             />
                          </ErrorBoundary>
@@ -374,12 +325,7 @@ const Dashboard: React.FC = () => {
                             onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
                         >
                             <FilterComponentForView
-                                localFilters={localFilters}
-                                setLocalFilters={setLocalFilters}
-                                {...(activeView === 'sales' && {
-                                    onBuyerRegionSearch: handleBuyerRegionSearch,
-                                    isBuyerRegionLoading: isBuyerRegionLoading
-                                })}
+                                localFilters={localFilters} setLocalFilters={setLocalFilters}
                             />
                         </FilterManager>
                     </div>
@@ -408,11 +354,7 @@ const Dashboard: React.FC = () => {
                     >
                         <FilterComponentForView
                             localFilters={localFilters}
-                            setLocalFilters={setLocalFilters}
-                             {...(activeView === 'sales' && {
-                                onBuyerRegionSearch: handleBuyerRegionSearch,
-                                isBuyerRegionLoading: isBuyerRegionLoading
-                            })}
+                            setLocalFilters={setLocalFilters}                            
                         />
                     </FilterManager>
                 )}

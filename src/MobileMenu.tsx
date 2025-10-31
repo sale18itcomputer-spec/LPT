@@ -36,6 +36,7 @@ const allMenuSections = [
       { view: 'profit-reconciliation' as ViewType, label: 'Profit Reconciliation', icon: ShieldCheckIcon, roles: ['Admin'] },
       { view: 'landed-cost-analysis' as ViewType, label: 'Landed Cost Analysis', icon: ScaleIcon, roles: ['Admin'] },
       { view: 'order-vs-sale' as ViewType, label: 'Order vs. Sale', icon: ArrowsRightLeftIcon, roles: ['Admin'] },
+      { view: 'spec-breakdown' as ViewType, label: 'Spec Breakdown', icon: CpuChipIcon, roles: ['Admin'] },
     ],
   },
   {

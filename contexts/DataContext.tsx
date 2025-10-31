@@ -1,3 +1,5 @@
+
+
 import React, { createContext, useContext, useState, useMemo, useCallback, ReactNode, useEffect } from 'react';
 import type { 
     Order, Sale, InventoryItem, Customer, 
@@ -5,7 +7,7 @@ import type {
     InventoryItemYearlyBreakdown, OrderKpiData, SalesKpiData, PromotionCandidate, SerializedItem,
     RebateProgram, RebateKpiData, RebateDetail, RebateSale, Shipment, ReconciledSale, ProfitabilityKpiData,
     AccessoryCost, RebateBreakdown, PriceListItem, AugmentedShipmentGroup,
-    FilterOptions, SaleFilterOptions
+    FilterOptions, SaleFilterOptions, SpecificationBreakdown
 } from '../types';
 import { useOrderData } from '../hooks/useOrderData';
 import { useSaleData } from '../hooks/useSaleData';
@@ -16,6 +18,7 @@ import { useRebateSaleData } from '../hooks/useRebateSaleData';
 import { useShipmentData } from '../hooks/useShipmentData';
 import { useBackpackCostData } from '../hooks/useBackpackCostData';
 import { usePriceListData } from '../hooks/usePriceListData';
+import { useSpecificationData } from '../hooks/useSpecificationData';
 import { 
     calculateInventoryStatus, getFirstOrderDates, getSalesMetricsByMtm, analyzeBackorderCandidates, analyzePromotionCandidates
 } from '../utils/dataProcessing';
@@ -24,6 +27,7 @@ import {
     INVENTORY_SHEET_NAME, CUSTOMER_SHEET_NAME, SALES_OPPORTUNITIES_SHEET_NAME, 
     BACKORDER_ANALYSIS_SHEET_NAME, PROMOTION_CANDIDATES_SHEET_NAME 
 } from '../constants';
+import { parseSpecification } from '../utils/specParser';
 
 const useSheetSync = (sheetType: string, data: any[]) => {
     const stringifiedData = JSON.stringify(data); // Use stringified data as dependency to detect deep changes
@@ -170,6 +174,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { isLoading: isShipmentsLoading, error: shipmentsError, allShipments, handleRefresh: refreshShipments } = useShipmentData();
     const { isLoading: isBackpackCostsLoading, error: backpackCostsError, allBackpackCosts, handleRefresh: refreshBackpackCosts } = useBackpackCostData();
     const { isLoading: isPriceListLoading, error: priceListError, data: rawPriceListItems, refreshData: refreshPriceList } = usePriceListData();
+    const { data: specSheetData, isLoading: isSpecsLoading, error: specsError } = useSpecificationData();
+
     const allPriceListItems = useMemo(() => rawPriceListItems.map(({ _uniqueId, ...rest }) => rest), [rawPriceListItems]);
 
 
@@ -181,8 +187,69 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsRefreshing(false);
     }, [refreshOrders, refreshSales, refreshSerialization, refreshRebates, refreshRebateDetails, refreshRebateSales, refreshShipments, refreshBackpackCosts, refreshPriceList]);
 
-    const allOrders = rawAllOrders;
-    const allSales = rawAllSales;
+    const specMap = useMemo(() => {
+        const map = new Map<string, { breakdown: SpecificationBreakdown; fullSpec: string }>();
+        specSheetData.forEach(item => {
+            const fullSpec = [
+                item.CPU,
+                item.GPU,
+                item.RAM,
+                item.Storage,
+                item.Display
+            ].filter(Boolean).join(' / ');
+            
+            // Call the single source of truth for parsing
+            const breakdown = parseSpecification(fullSpec);
+    
+            // Augment with direct values if parser misses something
+            if (!breakdown.cpuModel) breakdown.cpuModel = item.CPU;
+            if (!breakdown.gpu) breakdown.gpu = item.GPU;
+            if (!breakdown.ramSize) breakdown.ramSize = item.RAM;
+            if (!breakdown.storageSize) breakdown.storageSize = item.Storage;
+    
+            map.set(item.MTM, { breakdown, fullSpec });
+        });
+        return map;
+    }, [specSheetData]);
+
+    const allOrders = useMemo(() => {
+        return (rawAllOrders as Order[]).map(order => {
+            const specFromSheet = specMap.get(order.mtm);
+            if (specFromSheet) {
+                return {
+                    ...order,
+                    specification: specFromSheet.fullSpec,
+                    parsedSpecification: specFromSheet.breakdown
+                };
+            }
+            // Fallback for MTMs not in the new sheet
+            return {
+                ...order,
+                parsedSpecification: parseSpecification(order.specification)
+            };
+        });
+    }, [rawAllOrders, specMap]);
+
+    const allSales = useMemo(() => {
+        return (rawAllSales as Sale[]).map(sale => {
+            const mtm = sale.lenovoProductNumber;
+            const specFromSheet = specMap.get(mtm);
+
+            if (specFromSheet) {
+                return {
+                    ...sale,
+                    specification: specFromSheet.fullSpec,
+                    parsedSpecification: specFromSheet.breakdown
+                };
+            }
+            
+            // Final fallback to parse the sale's own spec string
+            return {
+                ...sale,
+                parsedSpecification: parseSpecification(sale.specification || '')
+            };
+        });
+    }, [rawAllSales, specMap]);
     
     const allInvoicesCount = useMemo(() => new Set(allSales.map(s => s.invoiceNumber)).size, [allSales]);
     
@@ -790,9 +857,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useSheetSync(PROMOTION_CANDIDATES_SHEET_NAME, derivedData.promotionCandidates);
 
     const value: DataContextType = {
-        isLoading: isOrdersLoading || isSalesLoading || isSerializationLoading || isRebatesLoading || isRebateDetailsLoading || isRebateSalesLoading || isShipmentsLoading || isBackpackCostsLoading || isPriceListLoading,
+        isLoading: isOrdersLoading || isSalesLoading || isSerializationLoading || isRebatesLoading || isRebateDetailsLoading || isRebateSalesLoading || isShipmentsLoading || isBackpackCostsLoading || isPriceListLoading || isSpecsLoading,
         isRefreshing,
-        error: ordersError || salesError || rebatesError || serializationError || rebateDetailsError || rebateSalesError || shipmentsError || backpackCostsError || priceListError,
+        error: ordersError || salesError || rebatesError || serializationError || rebateDetailsError || rebateSalesError || shipmentsError || backpackCostsError || priceListError || specsError,
         serializationError,
         lastUpdated: ordersLastUpdated || salesLastUpdated,
         handleGlobalRefresh,

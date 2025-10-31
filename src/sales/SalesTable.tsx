@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, Fragment, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Sale, DashboardType } from '../../types';
@@ -55,6 +56,9 @@ const ExpandedDetailView: React.FC<{ items: Sale[] }> = ({ items }) => (
                     </div>
                     <p className="ml-4 font-medium text-primary-text dark:text-dark-primary-text text-right">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.unitPrice)}</p>
                 </div>
+                {item.specification && (
+                    <p className="mt-2 text-xs text-secondary-text dark:text-dark-secondary-text whitespace-pre-wrap">{item.specification}</p>
+                )}
                 <div className="mt-2 pt-2 border-t border-border-color dark:border-dark-border-color flex justify-between text-xs text-secondary-text dark:text-dark-secondary-text">
                     <span>Serial: <span className="font-mono text-primary-text dark:text-dark-primary-text">{item.serialNumber}</span></span>
                     <span>Segment: <span className="font-medium text-primary-text dark:text-dark-primary-text">{item.segment}</span></span>

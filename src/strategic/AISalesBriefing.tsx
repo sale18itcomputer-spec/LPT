@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -9,11 +8,11 @@ import TierBadge from '../customers/TierBadge';
 
 const BriefingSection: React.FC<{ icon: React.FC<any>, title: string, children: React.ReactNode }> = ({ icon: Icon, title, children }) => (
     <div>
-        <h4 className="font-semibold text-primary-text flex items-center mb-2">
+        <h4 className="font-semibold text-primary-text dark:text-dark-primary-text flex items-center mb-2">
             <Icon className="h-5 w-5 mr-2 text-indigo-500" />
             {title}
         </h4>
-        <div className="pl-7 text-sm text-secondary-text space-y-2">{children}</div>
+        <div className="pl-7 text-sm text-secondary-text dark:text-dark-secondary-text space-y-2">{children}</div>
     </div>
 );
 
@@ -85,11 +84,16 @@ Generate a JSON object that strictly adheres to the provided schema. The analysi
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: prompt,
-                config: { temperature: 0.7, responseMimeType: "application/json", responseSchema: schema }
+                config: { 
+                    temperature: 0.7, 
+                    responseMimeType: "application/json", 
+                    responseSchema: schema 
+                }
             });
             
             setBriefing(JSON.parse(response.text));
         } catch (err) {
+            console.error("Error generating sales briefing:", err);
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
             setIsLoading(false);
@@ -117,14 +121,14 @@ ${briefing.recommendedTactic}
     };
 
     return (
-        <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4 sm:p-6 h-full flex flex-col">
+        <div className="bg-indigo-50/70 dark:bg-dark-secondary-bg/50 border border-indigo-200 dark:border-indigo-900/50 rounded-xl p-4 sm:p-6 h-full flex flex-col">
             <div className="flex justify-between items-start mb-4">
                 <div>
-                    <h3 className="text-lg font-semibold text-indigo-900 flex items-center">
+                    <h3 className="text-lg font-semibold text-indigo-900 dark:text-indigo-200 flex items-center">
                         <SparklesIcon className="h-6 w-6 mr-2" />
                         AI Sales Briefing
                     </h3>
-                    <p className="text-sm text-indigo-800/80 mt-1">Strategic insights based on current opportunities.</p>
+                    <p className="text-sm text-indigo-800/80 dark:text-indigo-300/80 mt-1">Strategic insights based on current opportunities.</p>
                 </div>
                 {!briefing && (
                      <motion.button
@@ -155,7 +159,7 @@ ${briefing.recommendedTactic}
                                         {briefing.topOpportunities.map((op, i) => (
                                             <li key={i}>
                                                 <div className="flex items-center gap-x-2">
-                                                    <p className="font-semibold text-primary-text">{op.customerName}</p>
+                                                    <p className="font-semibold text-primary-text dark:text-dark-primary-text">{op.customerName}</p>
                                                     <TierBadge tier={op.customerTier} />
                                                 </div>
                                                 <p className="italic">"{op.reasoning}"</p>
@@ -174,7 +178,7 @@ ${briefing.recommendedTactic}
             </div>
             
             {briefing && (
-                <div className="mt-4 pt-4 border-t border-indigo-200 flex justify-end gap-x-2">
+                <div className="mt-4 pt-4 border-t border-indigo-200 dark:border-indigo-900/50 flex justify-end gap-x-2">
                      <button onClick={handleCopy} className="inline-flex items-center px-2.5 py-1 border border-transparent text-xs font-medium rounded-md shadow-sm text-indigo-700 bg-indigo-100 hover:bg-indigo-200"><DocumentDuplicateIcon className="h-4 w-4 mr-1.5"/>{copyStatus === 'copied' ? 'Copied' : 'Copy Briefing'}</button>
                      <button onClick={handleGenerate} disabled={isLoading} className="inline-flex items-center px-2.5 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">{isLoading ? '...' : 'Regenerate'}</button>
                 </div>

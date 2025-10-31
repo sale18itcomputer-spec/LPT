@@ -1,7 +1,8 @@
+
 import Papa from 'papaparse';
-import type { Order, OrderDataResponse, FilterOptions, Sale, SaleDataResponse, SaleFilterOptions, AuthUser, PriceListItem, SerializedItem, RebateProgram, RebateDetail, RebateSale, Shipment, AccessoryCost, Task, TaskStatus, TaskPriority } from '../types';
+import type { Order, OrderDataResponse, FilterOptions, Sale, SaleDataResponse, SaleFilterOptions, AuthUser, PriceListItem, SerializedItem, RebateProgram, RebateDetail, RebateSale, Shipment, AccessoryCost, Task, TaskStatus, TaskPriority, SpecificationSheetItem } from '../types';
 import { 
-    ORDER_SHEET_URL, SALE_SHEET_URL, AUTH_SHEET_URL, PRICE_LIST_SHEET_URL, SERIALIZATION_SHEET_URL, REBATE_SHEET_URL, REBATE_DETAIL_SHEET_URL, REBATE_SALES_SHEET_URL, SHIPMENT_SHEET_URL, BACKPACK_COST_SHEET_URL,
+    ORDER_SHEET_URL, SALE_SHEET_URL, AUTH_SHEET_URL, PRICE_LIST_SHEET_URL, SERIALIZATION_SHEET_URL, REBATE_SHEET_URL, REBATE_DETAIL_SHEET_URL, REBATE_SALES_SHEET_URL, SHIPMENT_SHEET_URL, BACKPACK_COST_SHEET_URL, SPECIFICATION_SHEET_URL,
     SOURCE_DATA_APPS_SCRIPT_URL, DERIVED_DATA_APPS_SCRIPT_URL,
     INVENTORY_SHEET_NAME, CUSTOMER_SHEET_NAME, SALES_OPPORTUNITIES_SHEET_NAME, BACKORDER_ANALYSIS_SHEET_NAME,
     PROMOTION_CANDIDATES_SHEET_NAME, MARKETING_PLANS_SHEET_NAME,
@@ -593,9 +594,32 @@ const processTaskData = (rawData: Record<string, string>[]): Task[] => {
 };
 
 /**
+ * Processes the raw, parsed CSV specification data into a structured format.
+ * @param rawData An array of row objects from the parsed CSV.
+ * @returns An array of SpecificationSheetItem objects.
+ */
+const processSpecificationData = (rawData: Record<string, string>[]): SpecificationSheetItem[] => {
+    return rawData
+      .map(row => {
+        const get = (headerName: string) => row[headerName];
+        
+        return {
+          MTM: String(get('MTM') || '').trim(),
+          CPU: String(get('CPU') || '').trim(),
+          GPU: String(get('GPU') || '').trim(),
+          RAM: String(get('RAM') || '').trim(),
+          Storage: String(get('Storage') || '').trim(),
+          Display: String(get('Display') || '').trim(),
+        };
+      })
+      .filter(item => item.MTM && item.MTM !== 'N/A' && item.MTM !== '');
+};
+
+
+/**
  * Fetches sheet data, then processes it on the main thread.
  */
-const fetchAndProcessData = async <T>(url: string, type: 'orders' | 'sales' | 'auth' | 'price-list' | 'serialization' | 'rebates' | 'rebate-details' | 'rebate-sales' | 'shipments' | 'backpack-costs' | 'tasks'): Promise<T> => {
+const fetchAndProcessData = async <T>(url: string, type: 'orders' | 'sales' | 'auth' | 'price-list' | 'serialization' | 'rebates' | 'rebate-details' | 'rebate-sales' | 'shipments' | 'backpack-costs' | 'tasks' | 'specifications'): Promise<T> => {
   const response = await fetch(url);
   if (!response.ok) {
     if ((type === 'serialization' || type === 'tasks') && response.status === 400) {
@@ -640,6 +664,9 @@ const fetchAndProcessData = async <T>(url: string, type: 'orders' | 'sales' | 'a
     case 'backpack-costs':
       result = processBackpackCostData(rawData);
       break;
+    case 'specifications':
+        result = processSpecificationData(rawData);
+        break;
     case 'tasks':
       result = processTaskData(rawData);
       break;
@@ -811,6 +838,17 @@ export const forceRefreshBackpackCostData = (): Promise<AccessoryCost[]> => {
   return getBackpackCostData();
 };
 
+// --- Specification Data Functions ---
+/**
+ * Retrieves specification data from the public Google Sheet.
+ */
+export const getSpecificationData = (): Promise<SpecificationSheetItem[]> => {
+  const url = new URL(SPECIFICATION_SHEET_URL);
+  url.searchParams.set('_cacheBust', Date.now().toString());
+  return fetchAndProcessData<SpecificationSheetItem[]>(url.toString(), 'specifications');
+};
+
+
 // --- Task Data Functions ---
 /**
  * Retrieves task data from the public Google Sheet.
@@ -873,6 +911,9 @@ const postToGoogleScript = async (url: string, payload: any) => {
     const formData = new FormData();
     formData.append('payload', JSON.stringify(payload));
     
+    console.log(`[Apps Script] Sending POST request to: ${url}`);
+    console.log(`[Apps Script] Payload for action '${payload.action}':`, payload);
+
     let response;
     try {
         response = await fetch(url, {
@@ -881,38 +922,45 @@ const postToGoogleScript = async (url: string, payload: any) => {
         });
     } catch (error) {
         // This block catches network errors (e.g., DNS, CORS, connectivity)
-        console.error("Network error during fetch to Google Apps Script:", error);
+        console.error(`[Apps Script] Network error during fetch to ${url}. This could be a CORS issue (check script deployment), an ad blocker, or a network problem.`, error);
         if (error instanceof TypeError && error.message.toLowerCase().includes('failed to fetch')) {
             throw new Error('A network error occurred. This could be a CORS issue, an ad blocker, or a problem with your connection or the Apps Script URL/deployment.');
         }
         throw new Error(`An unexpected network error occurred: ${(error as Error).message}`);
     }
 
+    const resultText = await response.text();
+    console.log(`[Apps Script] Raw response (Status: ${response.status}):`, resultText);
+
     // This block handles the HTTP response itself
     if (!response.ok) {
-        const errorBody = await response.text().catch(() => 'Could not read error body.');
-        console.error(`Google Apps Script responded with HTTP status ${response.status}. Response: ${errorBody}`);
-        throw new Error(`The Google Sheet backend responded with an error (Status: ${response.status}). Please check the Apps Script logs for more details.`);
+        console.error(`[Apps Script] Responded with HTTP status ${response.status}. Full response:`, resultText);
+        let errorMessage = `The Google Sheet backend responded with an error (Status: ${response.status}).`;
+        if (resultText) {
+            errorMessage += ` Response: ${resultText.substring(0, 300)}`;
+        }
+        errorMessage += ' Please check the Apps Script logs for more details.';
+        throw new Error(errorMessage);
     }
-
-    const resultText = await response.text();
-
+    
+    // Handle cases where Apps Script does a redirect, resulting in an empty body but a 200 OK.
     if (!resultText && response.ok) {
-        console.warn('Received an empty response from Google Apps Script. Assuming success due to potential redirect handling.');
-        return { status: 'success', data: { message: 'Request sent; response was empty.' }};
+        console.warn('[Apps Script] Received an empty but successful (200 OK) response. This can happen with redirects. Assuming success.');
+        return { status: 'success', data: { message: 'Request sent; response was empty but status was OK.' }};
     }
     
     let result;
     try {
         result = JSON.parse(resultText);
     } catch (e) {
-        console.error("Non-JSON response from Apps Script:", resultText);
-        // This is a critical error. The script URL is likely wrong or there's a major script error.
-        throw new Error(`The Google Sheet backend returned an invalid response. This often happens if there's an error within the Apps Script code itself.`);
+        console.error("[Apps Script] FATAL: Non-JSON response received. This often means there's a critical error in the Apps Script code itself or the wrong URL is being used (e.g., /dev instead of /exec). The script might be returning an HTML error page instead of JSON.", resultText);
+        throw new Error(`The Google Sheet backend returned an invalid (non-JSON) response. This often happens if there's an error within the Apps Script code itself.`);
     }
 
+    console.log(`[Apps Script] Parsed JSON response for action '${payload.action}':`, result);
+
     if (result.status === 'error') {
-        console.error("Error message from Apps Script:", result.message);
+        console.error("[Apps Script] The script returned a controlled error message:", result.message);
         throw new Error(result.message);
     }
 

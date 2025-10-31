@@ -189,7 +189,7 @@ const Header: React.FC<HeaderProps> = ({
   }, [isUserMenuOpen]);
 
   const analysisViews: ViewType[] = [
-    'strategic', 'customers', 'promotions', 'backorders', 'profit-reconciliation', 'landed-cost-analysis', 'order-vs-sale'
+    'strategic', 'customers', 'promotions', 'backorders', 'profit-reconciliation', 'landed-cost-analysis', 'order-vs-sale', 'spec-breakdown'
   ];
   const managementViews: ViewType[] = [
     'inventory', 'shipments', 'price-list', 'rebates'
@@ -224,6 +224,7 @@ const Header: React.FC<HeaderProps> = ({
                              <DropdownItem label="Profit Reconciliation" isActive={activeView === 'profit-reconciliation'} onClick={() => setActiveView('profit-reconciliation')} />
                             <DropdownItem label="Landed Cost Analysis" isActive={activeView === 'landed-cost-analysis'} onClick={() => setActiveView('landed-cost-analysis')} />
                              <DropdownItem label="Order vs. Sale" isActive={activeView === 'order-vs-sale'} onClick={() => setActiveView('order-vs-sale')} />
+                             <DropdownItem label="Specification Breakdown" isActive={activeView === 'spec-breakdown'} onClick={() => setActiveView('spec-breakdown')} />
                         </NavDropdown>
 
                         <NavDropdown label="Management" isActive={getIsActive(managementViews)} dropdownWidthClass="w-56">

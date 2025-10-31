@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useContext, useId } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LabelList, Treemap } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,7 +22,7 @@ const compactNumberFormatter = (val: unknown) => {
     return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(val);
 }
 
-// View Mode Switcher
+// View Mode Button
 const ViewModeButton: React.FC<{ active: boolean; onClick: () => void; icon: React.FC<any>; label: string }> = ({ active, onClick, icon: Icon, label }) => (
   <button
     onClick={onClick}
@@ -156,7 +155,6 @@ const TopSellingModelsChart: React.FC<TopSellingModelsChartProps> = ({
   const isDark = themeContext?.theme === 'dark';
 
   const topModelsData = useMemo(() => {
-    // FIX: Explicitly type the accumulator in the `reduce` call to ensure correct type inference.
     const aggregated = sales.reduce((acc: Record<string, { revenue: number; units: number; modelName: string }>, s: Sale) => {
       const mtm = s.lenovoProductNumber;
       if (mtm === 'N/A' || !mtm) return acc;
@@ -284,7 +282,7 @@ const TopSellingModelsChart: React.FC<TopSellingModelsChartProps> = ({
           <ViewModeSwitcher viewMode={viewMode} setViewMode={setViewMode} />
         </>
       }
-      className="flex flex-col h-[500px]"
+      className="flex flex-col h-[560px]"
     >
       <div aria-live="polite" className="sr-only">
         Viewing {viewMode} of top selling models sorted by {sortBy}.
@@ -344,7 +342,6 @@ const TopSellingModelsChart: React.FC<TopSellingModelsChartProps> = ({
               </BarChart>
             </ResponsiveContainer>
           )}
-
           {viewMode === 'treemap' && <TreemapView data={topModelsData} sortBy={sortBy} />}
           {viewMode === 'table' && <DataTable data={topModelsData} sortBy={sortBy} onRowClick={onModelSelect} />}
         </motion.div>
